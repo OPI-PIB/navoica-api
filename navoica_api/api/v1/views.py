@@ -6,19 +6,23 @@ from __future__ import absolute_import, unicode_literals
 
 from completion.models import BlockCompletion
 from django.contrib.auth.models import User
-from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
-from rest_framework import permissions, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from courseware import courses
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
 from django.core.exceptions import ObjectDoesNotExist
-
+from edx_rest_framework_extensions.authentication import JwtAuthentication
 from lms.djangoapps.course_api.blocks.api import get_blocks
-from openedx.core.lib.api.permissions import IsCourseStaffInstructor
+from openedx.core.lib.api import permissions, authentication
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
-
-class CourseProgressView(APIView):
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_oauth.authentication import OAuth2Authentication
+from navoica_api.api.permissions import IsCourseStaffInstructorOrUserInUrlOrStaff
+from lms.djangoapps.ccx.api.v0.views import get_valid_course
+class CourseProgressView(GenericAPIView):
     """
         **Use Case**
 
@@ -57,7 +61,16 @@ class CourseProgressView(APIView):
                 "completion_value": 0.800
             }
     """
-    permission_classes = (permissions.IsAuthenticated, IsCourseStaffInstructor)
+    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser, authentication.SessionAuthenticationAllowInactiveUser, JwtAuthentication,)
+    permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrUserInUrlOrStaff)
+
+    def get_object(self, course_id, is_ccx=False):  # pylint: disable=arguments-differ
+        """
+        Override the default get_object to allow a custom getter for the CCX
+        """
+        course_object = courses.get_course_by_id(course_id)
+        self.check_object_permissions(self.request, course_object)
+        return course_object
 
     def get(self, request, username, course_id):
         """
@@ -71,6 +84,7 @@ class CourseProgressView(APIView):
         Return:
             A JSON serialized representation of the certificate.
         """
+        ccx_course_object= self.get_object(course_id)
         self.completion = 0
         self.total_children = 0
 
@@ -101,7 +115,7 @@ class CourseProgressView(APIView):
         except User.DoesNotExist:
             return Response(
                 status=404,
-                data={'error_code': 'not_found'}
+                data={'error_code': u'Not found.'}
             )
 
         block_types_filter = [
@@ -127,7 +141,7 @@ class CourseProgressView(APIView):
         except ItemNotFoundError:
             return Response(
                 status=404,
-                data={'error_code': 'not_found'}
+                data={'error_code': u'Not found.'}
             )
 
 

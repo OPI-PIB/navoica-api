@@ -1,0 +1,13 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "python.pythonPath": "/edx/app/edxapp/venvs/edxapp/bin/python",
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.linting.pylintArgs": [
+        "--rcfile=pylintrc",
+    ],
+    "python.autoComplete.extraPaths": ["/edx/app/edxapp/edx-platform"],
+
+}
