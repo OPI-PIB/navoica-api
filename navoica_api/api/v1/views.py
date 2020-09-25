@@ -6,19 +6,23 @@ from __future__ import absolute_import, unicode_literals
 
 from completion.models import BlockCompletion
 from django.contrib.auth.models import User
-from opaque_keys import InvalidKeyError
+from edx_rest_framework_extensions.authentication import JwtAuthentication
 from opaque_keys.edx.keys import CourseKey
-from rest_framework import permissions, status
+from rest_framework import status
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from django.core.exceptions import ObjectDoesNotExist
 
+from courseware import courses  # pylint: disable=import-error
 from lms.djangoapps.course_api.blocks.api import get_blocks
-from openedx.core.lib.api.permissions import IsCourseStaffInstructor
+from navoica_api.api.permissions import \
+    IsCourseStaffInstructorOrUserInUrlOrStaff
+from openedx.core.lib.api import authentication
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 
-class CourseProgressView(APIView):
+
+class CourseProgressApiView(GenericAPIView):
     """
         **Use Case**
 
@@ -57,8 +61,15 @@ class CourseProgressView(APIView):
                 "completion_value": 0.800
             }
     """
-    permission_classes = (permissions.IsAuthenticated, IsCourseStaffInstructor)
+    def __init__(self):
+        super(CourseProgressApiView, self).__init__()
+        self.completion = 0
+        self.total_children = 0
 
+    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
+                            authentication.SessionAuthenticationAllowInactiveUser,
+                             JwtAuthentication,)
+    permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrUserInUrlOrStaff)
     def get(self, request, username, course_id):
         """
         Gets a progress information.
@@ -71,8 +82,15 @@ class CourseProgressView(APIView):
         Return:
             A JSON serialized representation of the certificate.
         """
-        self.completion = 0
-        self.total_children = 0
+        try:
+            course_object_id = CourseKey.from_string(course_id)
+        except:
+            return Response(
+                status=404,
+                data={'error_code': u'Not found.'}
+            )
+
+        self.check_object_permissions(self.request, courses.get_course_by_id(course_object_id))
 
         def get_completion(course_completions, all_blocks, block_id):
             """
@@ -94,14 +112,14 @@ class CourseProgressView(APIView):
 
             return round(self.completion/self.total_children, 3)
 
-        course_usage_key = modulestore().make_course_usage_key(CourseKey.from_string(course_id))
+        course_usage_key = modulestore().make_course_usage_key(course_object_id)
 
         try:
             user_id = User.objects.get(username=username).id
         except User.DoesNotExist:
             return Response(
                 status=404,
-                data={'error_code': 'not_found'}
+                data={'error_code': u'Not found.'}
             )
 
         block_types_filter = [
@@ -119,7 +137,7 @@ class CourseProgressView(APIView):
             'inline-dropdown',
         ]
         try:
-            blocks = get_blocks(request,course_usage_key,nav_depth=3,requested_fields=[
+            blocks = get_blocks(request, course_usage_key, nav_depth=3, requested_fields=[
                 'children',
             ],
             block_types_filter=block_types_filter
@@ -127,11 +145,11 @@ class CourseProgressView(APIView):
         except ItemNotFoundError:
             return Response(
                 status=404,
-                data={'error_code': 'not_found'}
+                data={'error_code': u'Not found.'}
             )
 
 
-        course_completions = BlockCompletion.get_course_completions(user_id, CourseKey.from_string(course_id))
+        course_completions = BlockCompletion.get_course_completions(user_id, course_object_id)
         aggregated_completion = get_completion(course_completions, blocks['blocks'], blocks['root'])
 
         response_dict = {"username": username,
