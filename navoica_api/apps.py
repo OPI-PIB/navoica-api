@@ -4,7 +4,7 @@ Config of navoica API app
 from __future__ import unicode_literals
 
 from django.apps import AppConfig
-from openedx.core.djangoapps.plugins.constants import ProjectType, SettingsType, PluginURLs, PluginSettings
+# from openedx.core.djangoapps.plugins.constants import ProjectType, SettingsType, PluginURLs, PluginSettings
 
 
 class NavoicaApiConfig(AppConfig):
