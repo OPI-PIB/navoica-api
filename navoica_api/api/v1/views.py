@@ -63,8 +63,7 @@ class CourseProgressApiView(GenericAPIView):
     """
     def __init__(self):
         super(CourseProgressApiView, self).__init__()
-        self.completion = 0
-        self.total_children = 0
+        self.units_progress_list = []
 
     authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
                             authentication.SessionAuthenticationAllowInactiveUser,
@@ -82,20 +81,11 @@ class CourseProgressApiView(GenericAPIView):
         Return:
             A JSON serialized representation of the certificate.
         """
-        try:
-            course_object_id = CourseKey.from_string(course_id)
-        except:
-            return Response(
-                status=404,
-                data={'error_code': u'Not found.'}
-            )
 
-        self.check_object_permissions(self.request, courses.get_course_by_id(course_object_id))
-
-        def get_completion(course_completions, all_blocks, block_id):
+        def aggregate_progress(course_completions, all_blocks, block_id):
             """
-            Recursively get the aggregate completion for a subsection,
-            given the subsection block and a list of all blocks.
+            Recursively get the progress for a units (vertical),
+            given list of all blocks.
             Parameters:
                 course_completions: a dictionary of completion values by block IDs
                 all_blocks: a dictionary of the block structure for a subsection
@@ -103,15 +93,35 @@ class CourseProgressApiView(GenericAPIView):
             """
             block = all_blocks.get(block_id)
             child_ids = block.get('children', [])
-            if not child_ids:
-                self.total_children += 1
-                self.completion += course_completions.get(block.serializer.instance, 0)
+            if block.get('type', None) == 'vertical':
+                self.units_progress_list.append([block_id, 0, 0])
+
+            if not child_ids and (block.get('type', None) in block_xblocks_types_filter):
+                self.units_progress_list[-1][1] += 1
+                self.units_progress_list[-1][2] += course_completions.get(block.serializer.instance, 0)
 
             for child_id in child_ids:
-                get_completion(course_completions, all_blocks, child_id)
+                aggregate_progress(course_completions, all_blocks, child_id)
 
-            return round(self.completion/self.total_children, 3)
+        def calculate_progress():
+            """
+            Calculate course progress from units progress
+            """
+            number_of_units = len(self.units_progress_list)
+            if number_of_units == 0:
+                return float(0.0)
+            else:
+                cumulative_sum = 0
+                for unit_progress in self.units_progress_list:
+                    if unit_progress[1] == 0:
+                        number_of_units -= 1
+                    else:
+                        cumulative_sum += unit_progress[2]/unit_progress[1]
+                return round(cumulative_sum/number_of_units, 3)
 
+
+        course_object_id = CourseKey.from_string(course_id)
+        self.check_object_permissions(self.request, courses.get_course_by_id(course_object_id))
         course_usage_key = modulestore().make_course_usage_key(course_object_id)
 
         try:
@@ -122,11 +132,14 @@ class CourseProgressApiView(GenericAPIView):
                 data={'error_code': u'Not found.'}
             )
 
-        block_types_filter = [
+        block_navigation_types_filter = [
             'course',
             'chapter',
             'sequential',
             'vertical',
+        ]
+
+        block_xblocks_types_filter = [
             'html',
             'problem',
             'video',
@@ -135,10 +148,15 @@ class CourseProgressApiView(GenericAPIView):
             'videojs',
             'embedded_answers',
             'inline-dropdown',
+            'openassessment',
+            'audioplayer',
         ]
+
+        block_types_filter = block_navigation_types_filter + block_xblocks_types_filter
+
         try:
             blocks = get_blocks(request, course_usage_key, nav_depth=3, requested_fields=[
-                'children',
+                'children', 'type',
             ],
             block_types_filter=block_types_filter
             )
@@ -148,12 +166,11 @@ class CourseProgressApiView(GenericAPIView):
                 data={'error_code': u'Not found.'}
             )
 
-
         course_completions = BlockCompletion.get_course_completions(user_id, course_object_id)
-        aggregated_completion = get_completion(course_completions, blocks['blocks'], blocks['root'])
-
+        aggregate_progress(course_completions, blocks['blocks'], blocks['root'])
+        calculated_progress = calculate_progress()
         response_dict = {"username": username,
                          "course_id": course_id,
-                         "completion_value": aggregated_completion}
+                         "completion_value": calculated_progress}
 
         return Response(response_dict, status=status.HTTP_200_OK)
