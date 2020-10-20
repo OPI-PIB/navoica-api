@@ -15,7 +15,7 @@ from courseware.tests.factories import (InstructorFactory, UserFactory)  # pylin
 
 from student.tests.factories import CourseEnrollmentFactory  # pylint: disable=import-error
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
-from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
 USER_PASSWORD = 'test'
 
@@ -34,10 +34,54 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
             number='verified',
             display_name='Verified Course'
         )
+
+        cls.chapter = ItemFactory.create(
+            parent_location=cls.course.location,
+            category='chapter',
+            display_name="Week 1",
+        )
+        cls.sequential = ItemFactory.create(
+            parent_location=cls.chapter.location,
+            category='sequential',
+            display_name="Lesson 1",
+        )
+        cls.vertical = ItemFactory.create(
+            parent_location=cls.sequential.location,
+            category='vertical',
+            display_name='Subsection 1',
+        )
+
+        cls.problem = ItemFactory.create(
+            parent=cls.vertical,
+            category="problem",
+            display_name="Test Problem",
+        )
+
         cls.second_course = CourseFactory.create(
             org='edx2',
             number='verified2',
             display_name='Verified Course2'
+        )
+        cls.second_chapter = ItemFactory.create(
+            parent_location=cls.second_course.location,
+            category='chapter',
+            display_name="Week 1",
+        )
+        cls.second_sequential = ItemFactory.create(
+            parent_location=cls.second_chapter.location,
+            category='sequential',
+            display_name="Lesson 1",
+        )
+        cls.second_vertical = ItemFactory.create(
+            parent_location=cls.second_sequential.location,
+            category='vertical',
+            display_name='Subsection 1',
+        )
+
+        cls.second_problem = ItemFactory.create(
+            parent=cls.second_vertical,
+            category="problem",
+            display_name="Test Problem",
         )
 
     def setUp(self):
