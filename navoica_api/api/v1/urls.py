@@ -14,6 +14,16 @@ PROGRESS_URLS = [
         name='detail')
 ]
 
+CERTIFICATES_URLS = [
+    url(
+        r'^courses/{course_id}/$'.format(
+            course_id=settings.COURSE_ID_PATTERN
+        ),
+        views.CertificatesListView.as_view(), name='list'
+    ),
+]
+
 urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS, namespace='progress')),
+    url(r'^certificates/', include(CERTIFICATES_URLS, namespace='certificates')),
 ]
