@@ -4,12 +4,13 @@ Tests for the Certificate REST APIs.
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
 from oauth2_provider import models as dot_models
 from rest_framework import status
 from rest_framework.test import APITestCase
+from six import text_type
 
 from lms.djangoapps.courseware.tests.factories import InstructorFactory, UserFactory
 from lms.djangoapps.certificates.models import CertificateStatuses
@@ -161,15 +162,15 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
         # authorized student for different user - should be 404
         self.client.login(username=self.student.username, password=USER_PASSWORD)
         resp = self.client.get(self.get_url(self.instructor_user.username, self.course.id))
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(resp.data, {u'detail': u'Not found.'})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.data, {u'detail': u'You do not have permission to perform this action.'})
         self.client.logout()
 
         # authorized student for different non exist user - should be 404
         self.client.login(username=self.student.username, password=USER_PASSWORD)
         resp = self.client.get(self.get_url('non_exist_user', self.course.id))
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(resp.data, {u'detail': u'Not found.'})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.data, {u'detail': u'You do not have permission to perform this action.'})
         self.client.logout()
 
     def test_staff_permissions(self):
@@ -206,11 +207,11 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
                                      u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
                                      u"completion_value": 0.0})
         self.client.logout()
-        # instructor user in another course, does not have access - should be 404
+        # instructor user in another course, does not have access - should be 403
         self.client.login(username=self.instructor_user.username, password=USER_PASSWORD)
         resp = self.client.get(self.get_url(self.student.username, self.second_course.id))
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(resp.data, {u'detail': u'Not found.'})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.data, {u'detail': 'You do not have permission to perform this action.'})
         self.client.logout()
 
     def test_inactive_user_access(self):
@@ -385,7 +386,7 @@ class CertificatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         self.assertEqual(resp.data['results'][0], OrderedDict([('profile_name', self.student.profile.name),
                                                             ('username', self.student.username),
                                                             ('email', self.student.email),
-                                                            ('created_date', unicode(self.CREATED_DATE.strftime(
+                                                            ('created_date', text_type(self.CREATED_DATE.strftime(
                                                             '%Y-%m-%dT%H:%M:%S.%fZ'))),
                                                             ('grade', u'0.98')]))
         self.client.logout()
@@ -397,7 +398,7 @@ class CertificatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         self.assertEqual(resp.data['results'][0], OrderedDict([('profile_name', self.student.profile.name),
                                                             ('username', self.student.username),
                                                             ('email', self.student.email),
-                                                            ('created_date', unicode(self.CREATED_DATE.strftime(
+                                                            ('created_date', text_type(self.CREATED_DATE.strftime(
                                                             '%Y-%m-%dT%H:%M:%S.%fZ'))),
                                                             ('grade', u'0.95')]))
 
@@ -414,7 +415,7 @@ class CertificatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         self.assertEqual(resp.data['results'][0], OrderedDict([('profile_name', self.student.profile.name),
                                                             ('username', self.student.username),
                                                             ('email', self.student.email),
-                                                            ('created_date', unicode(self.CREATED_DATE.strftime(
+                                                            ('created_date', text_type(self.CREATED_DATE.strftime(
                                                             '%Y-%m-%dT%H:%M:%S.%fZ'))),
                                                             ('grade', u'0.98')]))
         self.client.logout()
@@ -432,7 +433,7 @@ class CertificatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         self.assertEqual(resp.data['results'][0], OrderedDict([('profile_name', self.student.profile.name),
                                                             ('username', self.student.username),
                                                             ('email', self.student.email),
-                                                            ('created_date', unicode(self.CREATED_DATE.strftime(
+                                                            ('created_date', text_type(self.CREATED_DATE.strftime(
                                                             '%Y-%m-%dT%H:%M:%S.%fZ'))),
                                                             ('grade', u'0.95')]))
         self.client.logout()

@@ -24,7 +24,7 @@ class IsCourseStaffInstructorOrUserInUrlOrStaff(IsUserInUrlOrStaff):
                  and hasattr(obj, 'coach') and obj.coach == request.user)):
             return True
 
-        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view)
+        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view).has_permission(request, view) # because IsUserinUrlorStaff return permission class ...
 
     def has_permission(self, request, view):
         return True

@@ -12,7 +12,7 @@ from completion.models import BlockCompletion
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from edx_rest_framework_extensions.authentication import JwtAuthentication
+from edx_rest_framework_extensions.auth.jwt.authentication import JwtAuthentication
 from edx_rest_framework_extensions.paginators import DefaultPagination
 from navoica_api.api.permissions import (IsCourseStaffInstructorOrStaff,
                                          IsCourseStaffInstructorOrUserInUrlOrStaff)
@@ -28,7 +28,8 @@ from rest_framework.response import Response
 from lms.djangoapps.courseware import courses
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.course_api.blocks.api import get_blocks
-from openedx.core.lib.api import authentication
+from edx_rest_framework_extensions.auth.session.authentication import SessionAuthenticationAllowInactiveUser
+from openedx.core.lib.api.authentication import OAuth2AuthenticationAllowInactiveUser
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 
@@ -79,8 +80,8 @@ class CourseProgressApiView(GenericAPIView):
         super(CourseProgressApiView, self).__init__()
         self.units_progress_list = []
 
-    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
-                              authentication.SessionAuthenticationAllowInactiveUser,
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
                               JwtAuthentication,)
     permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrUserInUrlOrStaff)
 
@@ -180,7 +181,7 @@ class CourseProgressApiView(GenericAPIView):
                 data={'error_code': u'Not found.'}
             )
 
-        course_completions = BlockCompletion.get_course_completions(user_id, course_object_id)
+        course_completions = BlockCompletion.get_learning_context_completions(user_id, course_object_id)
         aggregate_progress(course_completions, blocks['blocks'], blocks['root'])
         calculated_progress = calculate_progress()
         response_dict = {"username": username,
@@ -242,8 +243,8 @@ class CertificatesListView(ListAPIView):
                 * grade: grade of certificate
     """
 
-    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
-                              authentication.SessionAuthenticationAllowInactiveUser,
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
                               JwtAuthentication,)
     permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrStaff)
     pagination_class = DefaultPagination
