@@ -25,7 +25,17 @@ CERTIFICATES_URLS = ([
     ),
 ], 'certificates')
 
+UPDATEMESSAGES_URLS = ([
+    url(r'^{username}/courses/{course_id}/$'.format(
+        username=settings.USERNAME_PATTERN,
+        course_id=settings.COURSE_ID_PATTERN,
+        ),
+        views.CourseUpdatesMessagesApiView.as_view(),
+        name='list'),
+],   'updates')
+
 urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS)),
     url(r'^certificates/', include(CERTIFICATES_URLS)),
+    url(r'^updates/', include(UPDATEMESSAGES_URLS)),
 ]
