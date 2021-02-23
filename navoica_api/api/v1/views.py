@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 
 from completion.models import BlockCompletion
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
@@ -147,25 +148,10 @@ class CourseProgressApiView(GenericAPIView):
                 data={'error_code': u'Not found.'}
             )
 
-        block_navigation_types_filter = [
-            'course',
-            'chapter',
-            'sequential',
-            'vertical',
-        ]
 
-        block_xblocks_types_filter = [
-            'html',
-            'problem',
-            'video',
-            'drag-and-drop-v2',
-            'poll',
-            'videojs',
-            'embedded_answers',
-            'inline-dropdown',
-            'openassessment',
-            'audioplayer',
-        ]
+        block_navigation_types_filter = settings.BLOCK_NAVIGATION_TYPES_FILTER
+
+        block_xblocks_types_filter = settings.BLOCK_XBLOCKS_TYPES_FILTER
 
         block_types_filter = block_navigation_types_filter + block_xblocks_types_filter
 
