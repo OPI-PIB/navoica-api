@@ -5,21 +5,28 @@ API v1 views.
 from __future__ import absolute_import, unicode_literals
 
 from completion.models import BlockCompletion
+from courseware import courses  # pylint: disable=import-error
 from django.contrib.auth.models import User
 from edx_rest_framework_extensions.authentication import JwtAuthentication
+from lms.djangoapps.course_api.blocks.api import get_blocks
+from navoica_api.api.v1.serializers.user import UserSerializer
 from opaque_keys.edx.keys import CourseKey
+from openedx.core.lib.api import authentication
+from openedx.core.lib.api.authentication import (
+    SessionAuthenticationAllowInactiveUser,
+    OAuth2AuthenticationAllowInactiveUser,
+)
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from courseware import courses  # pylint: disable=import-error
-from lms.djangoapps.course_api.blocks.api import get_blocks
-from navoica_api.api.permissions import \
-    IsCourseStaffInstructorOrUserInUrlOrStaff
-from openedx.core.lib.api import authentication
+from rest_framework.views import APIView
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
+
+from navoica_api.api.permissions import \
+    IsCourseStaffInstructorOrUserInUrlOrStaff
 
 
 class CourseProgressApiView(GenericAPIView):
@@ -61,14 +68,16 @@ class CourseProgressApiView(GenericAPIView):
                 "completion_value": 0.800
             }
     """
+
     def __init__(self):
         super(CourseProgressApiView, self).__init__()
         self.units_progress_list = []
 
     authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
-                            authentication.SessionAuthenticationAllowInactiveUser,
-                             JwtAuthentication,)
+                              authentication.SessionAuthenticationAllowInactiveUser,
+                              JwtAuthentication,)
     permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrUserInUrlOrStaff)
+
     def get(self, request, username, course_id):
         """
         Gets a progress information.
@@ -116,9 +125,8 @@ class CourseProgressApiView(GenericAPIView):
                     if unit_progress[1] == 0:
                         number_of_units -= 1
                     else:
-                        cumulative_sum += unit_progress[2]/unit_progress[1]
-                return round(cumulative_sum/number_of_units, 3)
-
+                        cumulative_sum += unit_progress[2] / unit_progress[1]
+                return round(cumulative_sum / number_of_units, 3)
 
         course_object_id = CourseKey.from_string(course_id)
         self.check_object_permissions(self.request, courses.get_course_by_id(course_object_id))
@@ -158,8 +166,8 @@ class CourseProgressApiView(GenericAPIView):
             blocks = get_blocks(request, course_usage_key, nav_depth=3, requested_fields=[
                 'children', 'type',
             ],
-            block_types_filter=block_types_filter
-            )
+                                block_types_filter=block_types_filter
+                                )
         except ItemNotFoundError:
             return Response(
                 status=404,
@@ -174,3 +182,41 @@ class CourseProgressApiView(GenericAPIView):
                          "completion_value": calculated_progress}
 
         return Response(response_dict, status=status.HTTP_200_OK)
+
+
+class UserApiView(APIView):
+    """
+            **Use Cases**
+
+                Get user's account information.
+
+            **Example Requests**
+
+                GET /api/user/v1/me
+
+            **Response Values for GET requests to the /me endpoint**
+                If the user is not logged in, an HTTP 401 "Not Authorized" response
+                is returned.
+
+                Otherwise, an HTTP 200 "OK" response is returned. The response
+                contains the following value:
+
+                "id"
+                "username"
+                "email"
+                "date_joined"
+                "is_active"
+                "name"
+                "gender"
+                "year_of_birth"
+                "level_of_education"
+
+        """
+
+    authentication_classes = (
+        OAuth2AuthenticationAllowInactiveUser, SessionAuthenticationAllowInactiveUser, JwtAuthentication
+    )
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
