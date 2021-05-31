@@ -37,13 +37,13 @@ UPDATEMESSAGES_URLS = ([
         name='list'),
 ],   'updates')
 
-USER_URLS = [
+USER_URLS = ([
     url(
         r'^me$',
         UserApiView.as_view(),
         name='user_me'
     ),
-]
+], 'user_api')
 
 urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS, namespace='progress')),

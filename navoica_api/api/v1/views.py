@@ -26,10 +26,7 @@ from lms.djangoapps.course_api.blocks.api import get_blocks
 from lms.djangoapps.courseware import courses
 from navoica_api.api.permissions import (
     IsCourseStaffInstructorOrStaff, IsCourseStaffInstructorOrUserInUrlOrStaff)
-from navoica_api.api.v1.serializers import GeneratedCertificateSerializer
-from edx_rest_framework_extensions.authentication import JwtAuthentication
 from lms.djangoapps.course_api.blocks.api import get_blocks
-from navoica_api.api.v1.serializers.user import UserSerializer
 from opaque_keys.edx.keys import CourseKey
 from openedx.core.djangoapps.user_api.course_tag.api import get_course_tag
 from openedx.core.lib.api.authentication import \
@@ -37,10 +34,6 @@ from openedx.core.lib.api.authentication import \
 from openedx.features.course_experience.views.course_updates import \
     get_ordered_updates
 from openedx.core.lib.api import authentication
-from openedx.core.lib.api.authentication import (
-    SessionAuthenticationAllowInactiveUser,
-    OAuth2AuthenticationAllowInactiveUser,
-)
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -57,6 +50,8 @@ from xmodule.modulestore.exceptions import ItemNotFoundError
 
 from navoica_api.api.permissions import \
     IsCourseStaffInstructorOrUserInUrlOrStaff
+from navoica_api.api.v1.serializers.certificate import GeneratedCertificateSerializer
+from navoica_api.api.v1.serializers.user import UserSerializer
 
 log = logging.getLogger(__name__)
 
