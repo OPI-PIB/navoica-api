@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 from completion.models import BlockCompletion
 from dateutil.parser import parse
+from courseware import courses  # pylint: disable=import-error
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.urls import reverse
@@ -25,13 +26,15 @@ from lms.djangoapps.course_api.blocks.api import get_blocks
 from lms.djangoapps.courseware import courses
 from navoica_api.api.permissions import (
     IsCourseStaffInstructorOrStaff, IsCourseStaffInstructorOrUserInUrlOrStaff)
-from navoica_api.api.v1.serializers import GeneratedCertificateSerializer
+from lms.djangoapps.course_api.blocks.api import get_blocks
 from opaque_keys.edx.keys import CourseKey
 from openedx.core.djangoapps.user_api.course_tag.api import get_course_tag
 from openedx.core.lib.api.authentication import \
     OAuth2AuthenticationAllowInactiveUser
 from openedx.features.course_experience.views.course_updates import \
     get_ordered_updates
+from openedx.core.lib.api import authentication
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
@@ -41,6 +44,14 @@ from rest_framework.response import Response
 from six import text_type
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
+from rest_framework.views import APIView
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError
+
+from navoica_api.api.permissions import \
+    IsCourseStaffInstructorOrUserInUrlOrStaff
+from navoica_api.api.v1.serializers.certificate import GeneratedCertificateSerializer
+from navoica_api.api.v1.serializers.user import UserSerializer
 
 log = logging.getLogger(__name__)
 
@@ -444,3 +455,41 @@ class CourseUpdatesMessagesApiView(GenericAPIView):
                              "updates": filtered_updates}
 
         return Response(response_dict, status=status.HTTP_200_OK)
+
+
+class UserApiView(APIView):
+    """
+            **Use Cases**
+
+                Get user's account information.
+
+            **Example Requests**
+
+                GET /api/user/v1/me
+
+            **Response Values for GET requests to the /me endpoint**
+                If the user is not logged in, an HTTP 401 "Not Authorized" response
+                is returned.
+
+                Otherwise, an HTTP 200 "OK" response is returned. The response
+                contains the following value:
+
+                "id"
+                "username"
+                "email"
+                "date_joined"
+                "is_active"
+                "name"
+                "gender"
+                "year_of_birth"
+                "level_of_education"
+
+        """
+
+    authentication_classes = (
+        OAuth2AuthenticationAllowInactiveUser, SessionAuthenticationAllowInactiveUser, JwtAuthentication
+    )
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
