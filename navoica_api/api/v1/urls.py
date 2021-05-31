@@ -4,6 +4,7 @@ Navoica API URLs.
 from navoica_api.api.v1 import views
 from django.conf import settings
 from django.conf.urls import include, url
+from navoica_api.api.v1.branding.urls import BRANDING_URLS
 
 app_name = 'v1'
 
@@ -38,4 +39,5 @@ urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS)),
     url(r'^certificates/', include(CERTIFICATES_URLS)),
     url(r'^updates/', include(UPDATEMESSAGES_URLS)),
+    url(r'^branding/', include(BRANDING_URLS)),
 ]
