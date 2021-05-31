@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 
 from completion.models import BlockCompletion
+from django.conf import settings
 from dateutil.parser import parse
 from courseware import courses  # pylint: disable=import-error
 from django.contrib.auth.models import User
@@ -167,25 +168,10 @@ class CourseProgressApiView(GenericAPIView):
                 data={'detail': u'Not found.'}
             )
 
-        block_navigation_types_filter = [
-            'course',
-            'chapter',
-            'sequential',
-            'vertical',
-        ]
 
-        block_xblocks_types_filter = [
-            'html',
-            'problem',
-            'video',
-            'drag-and-drop-v2',
-            'poll',
-            'videojs',
-            'embedded_answers',
-            'inline-dropdown',
-            'openassessment',
-            'audioplayer',
-        ]
+        block_navigation_types_filter = settings.BLOCK_NAVIGATION_TYPES_FILTER
+
+        block_xblocks_types_filter = settings.BLOCK_XBLOCKS_TYPES_FILTER
 
         block_types_filter = block_navigation_types_filter + block_xblocks_types_filter
 
