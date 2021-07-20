@@ -2,6 +2,7 @@ from django.conf.urls import url
 from django.contrib.sitemaps.views import sitemap
 from static_template_view import views
 
+from navoica_api.certificates import api
 from navoica_api.sitemaps import CourseOverviewSitemap
 
 urlpatterns = [
@@ -11,4 +12,6 @@ urlpatterns = [
 
     url(r'^sitemap\.xml$', sitemap, {'sitemaps': {'courses': CourseOverviewSitemap()}},
         name='django.contrib.sitemaps.views.sitemap'),
+
+    url(r'^start_merge_certificates', api.start_merge_certificates, name='start_merge_certificates'),
 ]
