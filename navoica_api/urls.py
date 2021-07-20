@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.conf.urls import url
 from django.contrib.sitemaps.views import sitemap
 from static_template_view import views
@@ -13,5 +14,6 @@ urlpatterns = [
     url(r'^sitemap\.xml$', sitemap, {'sitemaps': {'courses': CourseOverviewSitemap()}},
         name='django.contrib.sitemaps.views.sitemap'),
 
-    url(r'^start_merge_certificates', api.start_merge_certificates, name='start_merge_certificates'),
+    url(r'^start_merge_certificates/{course_id}/'.format(course_id=settings.COURSE_ID_PATTERN, ),
+        api.start_merge_certificates, name='start_merge_certificates'),
 ]
