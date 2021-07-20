@@ -17,6 +17,3 @@ class CertificateGenerationMergeHistory(TimeStampedModel):
         if self.pdf.name:
             return _("generated")
         return _("generating")
-
-    class Meta(object):
-        app_label = "certificates"
