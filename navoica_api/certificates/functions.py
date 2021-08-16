@@ -5,13 +5,12 @@ from django.test.client import RequestFactory
 from django.contrib.auth.models import AnonymousUser
 from lms.djangoapps.certificates.views import render_cert_by_uuid
 from bs4 import BeautifulSoup
-from urlparse import urlparse
+import urllib.parse
 from django.conf import settings
 import requests
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
-from lms.djangoapps.certificates.models import \
-    CertificateGenerationMergeHistory, CertificateStatuses, GeneratedCertificate
+from lms.djangoapps.certificates.models import CertificateStatuses, GeneratedCertificate
 from lms.djangoapps.instructor_task.models import InstructorTask
 from shutil import make_archive
 from lms.djangoapps.instructor_task.tasks_helper.runner import TaskProgress
