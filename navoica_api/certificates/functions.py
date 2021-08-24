@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from lms.djangoapps.certificates.views import render_cert_by_uuid
 from bs4 import BeautifulSoup
 import urllib.parse
+from urllib.parse import urlparse
 from django.conf import settings
 import requests
 from django.core.files.base import ContentFile
@@ -30,14 +31,12 @@ def render_pdf(html,certificate_uuid,return_content=False):
             if img.get("src", None):
                 img_src = img['src']
                 o = urlparse(img_src)
-                if o.netloc == "":
-                    img['src'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
+                img['src'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
 
         for href in soup.find_all('link'):
             link_href = href['href']
             o = urlparse(link_href)
-            if o.netloc == "":
-                href['href'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
+            href['href'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
 
     html = str(soup)
     log.info(
@@ -60,11 +59,11 @@ def render_pdf(html,certificate_uuid,return_content=False):
         if return_content:
             return r.content
 
-        path = default_storage.save('path/to/file', ContentFile(r.content))
-        certificate = GeneratedCertificate.object.get(
+        path = default_storage.save('certificates/'+certificate_uuid+".pdf", ContentFile(r.content))
+        certificate = GeneratedCertificate.objects.get(
             verify_uuid=certificate_uuid
         )
-        certificate.download_url = path
+        certificate.download_url = default_storage.url(path)
         certificate.save()
 
 
