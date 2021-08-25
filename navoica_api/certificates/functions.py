@@ -64,7 +64,7 @@ def render_pdf(html,certificate_uuid,return_content=False):
             verify_uuid=certificate_uuid
         )
         certificate.download_url = default_storage.url(path)
-        certificate.save()
+        certificate.save(update_fields=['download_url'])
 
 
 def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id, task_input, action_name):
