@@ -33,7 +33,7 @@ def render_pdf(html,certificate_uuid,return_content=False):
                 o = urlparse(img_src)
                 img['src'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
 
-        for href in soup.find_all('link'):
+        for href in soup.find_all(['link', 'base']):
             link_href = href['href']
             o = urlparse(link_href)
             href['href'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()

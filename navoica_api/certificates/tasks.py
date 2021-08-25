@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+import requests
 
 from celery import task
 from django.conf import settings
@@ -16,13 +17,9 @@ TASK_LOG = logging.getLogger('edx.celery.task')
 
 @task()
 def render_pdf_cert_by_uuid(certificate_uuid):
-    factory = RequestFactory()
-    fake_request = factory.get("")
-    fake_request.user = AnonymousUser()
-    fake_request.session = {}
 
-    output = render_cert_by_uuid(fake_request, certificate_uuid)
-    render_pdf(html=output.content,certificate_uuid=certificate_uuid)
+    content = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate_uuid)).content
+    render_pdf(html=content,certificate_uuid=certificate_uuid)
 
 @task(base=BaseInstructorTask, routing_key=settings.GRADES_DOWNLOAD_ROUTING_KEY)
 def merge_all_certificates(entry_id, xmodule_instance_args):
