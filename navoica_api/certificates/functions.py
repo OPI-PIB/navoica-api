@@ -16,6 +16,7 @@ from lms.djangoapps.instructor_task.models import InstructorTask
 from shutil import make_archive
 from lms.djangoapps.instructor_task.tasks_helper.runner import TaskProgress
 from time import time
+from django.db.models import Q
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
     certificates = GeneratedCertificate.eligible_certificates.filter(
         status=CertificateStatuses.downloadable,
         course_id=course_id
-    )
+    ).exclude(download_url='')
 
     task_progress = TaskProgress(action_name, certificates.count(), start_time)
 
@@ -83,39 +84,32 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
 
     base_tmp = "/tmp/certificates/"
     path_tmp = base_tmp+str(course_id)+"/"
+
     try:
         os.makedirs(path_tmp)
     except OSError:
         pass
 
-    factory = RequestFactory()
-    fake_request = factory.get("")
-    fake_request.user = AnonymousUser()
-    fake_request.session = {}
-
-    # Generate certificate for each student
+    # Download certificate for each student
     for certificate in certificates:
         task_progress.attempted += 1
         current_step = {'step': certificate.verify_uuid}
 
-        output = render_cert_by_uuid(fake_request, certificate.verify_uuid)
-
-        pdf_content = render_pdf(output.content, True)
-
-        if pdf_content:
+        r = requests.get(certificate.download_url)
+        if r.status_code == 200:
             with open(path_tmp+certificate.verify_uuid+".pdf", 'wb') as f:
-                f.write(pdf_content)
+                f.write(r.content)
             task_progress.succeeded += 1
         else:
             task_progress.failed += 1
 
         task_progress.update_task_state(extra_meta=current_step)
 
-    cert_genereted_history, created = CertificateGenerationMergeHistory.objects.get_or_create(
+    cert_generated_history, created = CertificateGenerationMergeHistory.objects.get_or_create(
         instructor_task=InstructorTask.objects.get(task_id=_xmodule_instance_args['task_id']),
     )
-    cert_genereted_history.course_id = str(course_id)
-    cert_genereted_history.save()
+    cert_generated_history.course_id = str(course_id)
+    cert_generated_history.save()
 
     current_step = {'step': 'Compressing all certificates to ZIP archive'}
     task_progress.update_task_state(extra_meta=current_step)
@@ -125,7 +119,7 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
     fh = open(base_tmp+str(course_id)+'.zip', "r")
     if fh:
         file_content = ContentFile(fh.read())
-        cert_genereted_history.pdf.save(str(course_id)+'.zip', file_content)
-        cert_genereted_history.save()
+        cert_generated_history.pdf.save(str(course_id)+'.zip', file_content)
+        cert_generated_history.save()
 
     return task_progress.update_task_state(extra_meta=current_step)
