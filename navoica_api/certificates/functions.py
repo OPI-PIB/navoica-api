@@ -20,7 +20,7 @@ from django.db.models import Q
 
 log = logging.getLogger(__name__)
 
-def render_pdf(html,certificate_uuid,return_content=False):
+def render_pdf(html,certificate_uuid):
 
     soup = BeautifulSoup(html, "html.parser")
 
@@ -57,15 +57,13 @@ def render_pdf(html,certificate_uuid,return_content=False):
     r = requests.post(settings.GOTENBERG_URL + 'convert/html', files=multipart_form_data)
 
     if r.status_code == 200:
-        if return_content:
-            return r.content
-
         path = default_storage.save('certificates/'+certificate_uuid+".pdf", ContentFile(r.content))
         certificate = GeneratedCertificate.objects.get(
             verify_uuid=certificate_uuid
         )
         certificate.download_url = default_storage.url(path)
         certificate.save(update_fields=['download_url'])
+        return certificate
 
 
 def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id, task_input, action_name):

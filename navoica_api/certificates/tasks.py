@@ -15,11 +15,15 @@ from navoica_api.certificates.functions import render_pdf, merging_all_course_ce
 
 TASK_LOG = logging.getLogger('edx.celery.task')
 
-@task()
+@task(bind=True, max_retries=3,default_retry_delay=60*5)
 def render_pdf_cert_by_uuid(certificate_uuid):
 
     content = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate_uuid)).content
-    render_pdf(html=content,certificate_uuid=certificate_uuid)
+    certificate = render_pdf(html=content,certificate_uuid=certificate_uuid)
+    if certificate:
+        return certificate
+    self.retry()
+
 
 @task(base=BaseInstructorTask, routing_key=settings.GRADES_DOWNLOAD_ROUTING_KEY)
 def merge_all_certificates(entry_id, xmodule_instance_args):
