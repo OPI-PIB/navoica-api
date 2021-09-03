@@ -16,7 +16,7 @@ from navoica_api.certificates.functions import render_pdf, merging_all_course_ce
 TASK_LOG = logging.getLogger('edx.celery.task')
 
 @task(bind=True, max_retries=3,default_retry_delay=60*5)
-def render_pdf_cert_by_uuid(certificate_uuid):
+def render_pdf_cert_by_uuid(self, certificate_uuid):
 
     content = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate_uuid)).content
     certificate = render_pdf(html=content,certificate_uuid=certificate_uuid)
