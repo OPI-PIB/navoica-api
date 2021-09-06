@@ -1,22 +1,19 @@
 import logging
 import os
-
-from django.test.client import RequestFactory
-from django.contrib.auth.models import AnonymousUser
-from lms.djangoapps.certificates.views import render_cert_by_uuid
-from bs4 import BeautifulSoup
-import urllib.parse
+from shutil import make_archive
+from time import time
 from urllib.parse import urlparse
-from django.conf import settings
+
 import requests
+from bs4 import BeautifulSoup
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from lms.djangoapps.certificates.models import CertificateStatuses, GeneratedCertificate
 from lms.djangoapps.instructor_task.models import InstructorTask
-from shutil import make_archive
 from lms.djangoapps.instructor_task.tasks_helper.runner import TaskProgress
-from time import time
-from django.db.models import Q
+from django.utils.translation import ugettext as _
+from navoica_api.models import CertificateGenerationMergeHistory
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +38,7 @@ def render_pdf(html,certificate_uuid):
 
     html = str(soup)
     log.info(
-        "Cert [PDF]: %s" % html
+        "Cert [PDF]: {}".format(html)
     )
 
     multipart_form_data = {
@@ -77,7 +74,7 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
 
     task_progress = TaskProgress(action_name, certificates.count(), start_time)
 
-    current_step = {'step': 'Merging Certificates'}
+    current_step = {'step': _('Merging Certificates')}
     task_progress.update_task_state(extra_meta=current_step)
 
     base_tmp = "/tmp/certificates/"
@@ -109,7 +106,7 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
     cert_generated_history.course_id = str(course_id)
     cert_generated_history.save()
 
-    current_step = {'step': 'Compressing all certificates to ZIP archive'}
+    current_step = {'step': _('Compressing all certificates to ZIP archive')}
     task_progress.update_task_state(extra_meta=current_step)
 
     make_archive(base_tmp+str(course_id), 'zip', root_dir=path_tmp, base_dir=None)
