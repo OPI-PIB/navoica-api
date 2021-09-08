@@ -5,8 +5,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 from lms.djangoapps.instructor.views.api import common_exceptions_400
 from opaque_keys.edx.keys import CourseKey
 from navoica_api.certificates.tasks import merge_all_certificates
-from lms.djangoapps.certificates.models import CertificateGenerationHistory, \
-    CertificateGenerationMergeHistory
 from lms.djangoapps.instructor_task.api_helper import (
     check_arguments_for_overriding, check_arguments_for_rescoring,
     check_entrance_exam_problems_for_rescoring,
@@ -14,6 +12,9 @@ from lms.djangoapps.instructor_task.api_helper import (
     submit_task)
 from util.json_request import JsonResponse
 from django.utils.translation import ugettext as _
+
+from navoica_api.models import CertificateGenerationMergeHistory
+
 
 def merge_certificates(request, course_key):
     task_type = 'merge_all_certificates_all'
