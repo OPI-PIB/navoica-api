@@ -111,7 +111,7 @@ def merging_all_course_certificates(_xmodule_instance_args, _entry_id, course_id
 
     make_archive(base_tmp+str(course_id), 'zip', root_dir=path_tmp, base_dir=None)
 
-    fh = open(base_tmp+str(course_id)+'.zip', "r")
+    fh = open(base_tmp+str(course_id)+'.zip', "rb")
     if fh:
         file_content = ContentFile(fh.read())
         cert_generated_history.pdf.save(str(course_id)+'.zip', file_content)
