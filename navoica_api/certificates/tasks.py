@@ -25,7 +25,7 @@ def render_pdf_cert_by_uuid(self, certificate_uuid):
     self.retry()
 
 
-@task(base=BaseInstructorTask, routing_key=settings.GRADES_DOWNLOAD_ROUTING_KEY)
+@task(base=BaseInstructorTask, queue=settings.HIGH_PRIORITY_QUEUE)
 def merge_all_certificates(entry_id, xmodule_instance_args):
     """
     Grade students and generate certificates.
