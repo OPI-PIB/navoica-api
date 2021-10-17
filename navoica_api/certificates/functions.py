@@ -19,6 +19,16 @@ log = logging.getLogger(__name__)
 
 def render_pdf(html,certificate_uuid):
 
+    try:
+        GeneratedCertificate.objects.get(
+            verify_uuid=certificate_uuid
+        )
+    except:
+        log.info(
+            "Cert [PDF]: Skip due missing GeneratedCertificate object {}".format(certificate_uuid)
+        )
+        return
+
     soup = BeautifulSoup(html, "html.parser")
 
     """
