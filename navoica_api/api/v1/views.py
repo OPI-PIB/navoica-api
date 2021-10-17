@@ -6,31 +6,53 @@ from __future__ import absolute_import, unicode_literals
 
 import csv
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from completion.models import BlockCompletion
+from django.conf import settings
+from dateutil.parser import parse
+from courseware import courses  # pylint: disable=import-error
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from edx_rest_framework_extensions.authentication import JwtAuthentication
+from edx_rest_framework_extensions.auth.jwt.authentication import \
+    JwtAuthentication
+from edx_rest_framework_extensions.auth.session.authentication import \
+    SessionAuthenticationAllowInactiveUser
 from edx_rest_framework_extensions.paginators import DefaultPagination
-from navoica_api.api.permissions import (IsCourseStaffInstructorOrStaff,
-                                         IsCourseStaffInstructorOrUserInUrlOrStaff)
-from navoica_api.api.v1.serializers import GeneratedCertificateSerializer
+from edx_rest_framework_extensions.permissions import IsUserInUrl
+from lms.djangoapps.certificates.models import GeneratedCertificate
+from lms.djangoapps.course_api.blocks.api import get_blocks
+from lms.djangoapps.courseware import courses
+from navoica_api.api.permissions import (
+    IsCourseStaffInstructorOrStaff, IsCourseStaffInstructorOrUserInUrlOrStaff)
+from lms.djangoapps.course_api.blocks.api import get_blocks
 from opaque_keys.edx.keys import CourseKey
+from openedx.core.djangoapps.user_api.course_tag.api import get_course_tag
+from openedx.core.lib.api.authentication import \
+    OAuth2AuthenticationAllowInactiveUser
+from openedx.features.course_experience.views.course_updates import \
+    get_ordered_updates
+from openedx.core.lib.api import authentication
+from rest_framework import permissions
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.response import Response
-
-from lms.djangoapps.courseware import courses
-from lms.djangoapps.certificates.models import GeneratedCertificate
-from lms.djangoapps.course_api.blocks.api import get_blocks
-from openedx.core.lib.api import authentication
+from six import text_type
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
+from rest_framework.views import APIView
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError
+
+from navoica_api.api.permissions import \
+    IsCourseStaffInstructorOrUserInUrlOrStaff
+from navoica_api.api.v1.serializers.certificate import GeneratedCertificateSerializer
+from navoica_api.api.v1.serializers.user import UserSerializer
 
 log = logging.getLogger(__name__)
 
@@ -79,8 +101,8 @@ class CourseProgressApiView(GenericAPIView):
         super(CourseProgressApiView, self).__init__()
         self.units_progress_list = []
 
-    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
-                              authentication.SessionAuthenticationAllowInactiveUser,
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
                               JwtAuthentication,)
     permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrUserInUrlOrStaff)
 
@@ -143,28 +165,13 @@ class CourseProgressApiView(GenericAPIView):
         except User.DoesNotExist:
             return Response(
                 status=404,
-                data={'error_code': u'Not found.'}
+                data={'detail': u'Not found.'}
             )
 
-        block_navigation_types_filter = [
-            'course',
-            'chapter',
-            'sequential',
-            'vertical',
-        ]
 
-        block_xblocks_types_filter = [
-            'html',
-            'problem',
-            'video',
-            'drag-and-drop-v2',
-            'poll',
-            'videojs',
-            'embedded_answers',
-            'inline-dropdown',
-            'openassessment',
-            'audioplayer',
-        ]
+        block_navigation_types_filter = settings.BLOCK_NAVIGATION_TYPES_FILTER
+
+        block_xblocks_types_filter = settings.BLOCK_XBLOCKS_TYPES_FILTER
 
         block_types_filter = block_navigation_types_filter + block_xblocks_types_filter
 
@@ -177,10 +184,10 @@ class CourseProgressApiView(GenericAPIView):
         except ItemNotFoundError:
             return Response(
                 status=404,
-                data={'error_code': u'Not found.'}
+                data={'detail': u'Not found.'}
             )
 
-        course_completions = BlockCompletion.get_course_completions(user_id, course_object_id)
+        course_completions = BlockCompletion.get_learning_context_completions(user_id, course_object_id)
         aggregate_progress(course_completions, blocks['blocks'], blocks['root'])
         calculated_progress = calculate_progress()
         response_dict = {"username": username,
@@ -242,8 +249,8 @@ class CertificatesListView(ListAPIView):
                 * grade: grade of certificate
     """
 
-    authentication_classes = (authentication.OAuth2AuthenticationAllowInactiveUser,
-                              authentication.SessionAuthenticationAllowInactiveUser,
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
                               JwtAuthentication,)
     permission_classes = (IsAuthenticated, IsCourseStaffInstructorOrStaff)
     pagination_class = DefaultPagination
@@ -251,7 +258,7 @@ class CertificatesListView(ListAPIView):
     renderer_classes = (JSONRenderer, BrowsableAPIRenderer)
     filter_backends = (OrderingFilter, DjangoFilterBackend, SearchFilter)
     filterset_fields = search_fields = ordering_fields = ('user__profile__name', 'user__username',
-        'user__email', 'created_date',)
+                                                          'user__email', 'created_date',)
 
     def __init__(self):
         super(CertificatesListView, self).__init__()
@@ -280,7 +287,7 @@ class CertificatesListView(ListAPIView):
         if 'attachment' in self.request.query_params:
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = 'attachment; filename={}'.format("report_{}.csv"
-            .format(datetime.now().strftime("%Y_%m_%d-%I_%M_%S")))
+                                                                               .format(datetime.now().strftime("%Y_%m_%d-%I_%M_%S")))
             writer = csv.writer(response)
             certs = self.get_serializer(queryset, many=True).data
             if certs:
@@ -298,3 +305,177 @@ class CertificatesListView(ListAPIView):
 
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
+
+
+PREFERENCE_KEY = 'view-welcome-message'
+
+
+class CourseUpdatesMessagesApiView(GenericAPIView):
+    """
+        **Use Case**
+
+            # * Get information about course updates
+
+        **Example Request**
+
+            GET /api/navoica/v1/updates/{username}/courses/{course_id}
+
+        **GET Parameters**
+
+            # A GET request must include the following parameters.
+
+            # * username: A string representation of an user's username.
+            # * course_id: A string representation of a Course ID.
+
+        **GET Response Values**
+
+            # If the request for information about the Updates is successful, an HTTP 200 "OK" response
+            # is returned.
+
+            # The HTTP 200 response has the following values.
+
+            # * username: A string representation of an user's username passed in the request.
+
+            # * course_id: A string representation of a Course ID.
+
+            # * updates: List of messsage updates in format:
+
+                # * id: String representation of id of update message
+
+                # * date: String representation of publish date of update message
+
+                # * content: String representation of update message
+
+            # * if welcome-message was not dismissed than return one more field
+
+            # *  'dismiss_url': A string represantation of dismiss url - optional
+
+
+
+        **Example GET Response**
+            {
+                # "username": "bob",
+                # "course_id": "edX/DemoX/Demo_Course",
+                # "updates": [
+                        {
+                            # "id": "1",
+                            # "date": "2021/01/01",
+                            # "content": "My first update message"
+                        },
+                        # ],
+                # "dismiss_url": "/courses/edX/DemoX/Demo_Course/course/dismiss_welcome_message"
+            }
+    """
+
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
+                              JwtAuthentication,)
+    permission_classes = (IsAuthenticated, IsUserInUrl)
+
+    def get(self, request, username, course_id):
+        """
+        Gets a updates messages.
+
+        Args:
+            request (Request): Django request object.
+            username (string): URI element specifying the user's username.
+            course_id (string): URI element specifying the course location.
+
+        Return:
+            A JSON serialized representation of the certificate.
+        """
+        def date_filter(update):
+            update_date = update.get('date')
+            update_id = update.get('id')
+            if update_date and update_id:
+                update_date = parse(update_date)
+                if update_date <= datetime.today() and update_date >= datetime.today() - timedelta(days=14):
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
+        def change_date_to_iso_format(update):
+            update_date = update.get('date')
+            if update_date:
+                update_date = parse(update_date, dayfirst=True)
+                update_date = update_date.isoformat()
+                update['date'] = update_date
+                return update
+
+        course_key = CourseKey.from_string(course_id)
+        course = courses.get_course_by_id(course_key)
+        if not courses.check_course_access(course=course, user=request.user, action='load', check_if_enrolled=True):
+            return Response(
+                status=403,
+                data={'detail': u'You do not have permission to perform this action.'}
+            )
+
+        ordered_updates = get_ordered_updates(request, course)
+        ordered_updates = list(map(change_date_to_iso_format, ordered_updates))
+
+        if not ordered_updates:
+            return Response(
+                status=404,
+                data={'detail': u'Not found.'}
+            )
+
+        if not get_course_tag(request.user, course_key, PREFERENCE_KEY) == 'False':
+
+            dismiss_url = reverse(
+                'openedx.course_experience.dismiss_welcome_message', kwargs={'course_id': text_type(course_key)}
+            )
+
+            response_dict = {
+                "username": username,
+                "course_id": course_id,
+                'dismiss_url': dismiss_url,
+                'updates': ordered_updates[-1],
+            }
+
+        else:
+            filtered_updates = list(filter(date_filter, ordered_updates[:-1]))
+            response_dict = {"username": username,
+                             "course_id": course_id,
+                             "updates": filtered_updates}
+
+        return Response(response_dict, status=status.HTTP_200_OK)
+
+
+class UserApiView(APIView):
+    """
+            **Use Cases**
+
+                Get user's account information.
+
+            **Example Requests**
+
+                GET /api/user/v1/me
+
+            **Response Values for GET requests to the /me endpoint**
+                If the user is not logged in, an HTTP 401 "Not Authorized" response
+                is returned.
+
+                Otherwise, an HTTP 200 "OK" response is returned. The response
+                contains the following value:
+
+                "id"
+                "username"
+                "email"
+                "date_joined"
+                "is_active"
+                "name"
+                "gender"
+                "year_of_birth"
+                "level_of_education"
+
+        """
+
+    authentication_classes = (
+        OAuth2AuthenticationAllowInactiveUser, SessionAuthenticationAllowInactiveUser, JwtAuthentication
+    )
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)

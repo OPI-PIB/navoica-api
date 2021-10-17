@@ -13,6 +13,10 @@ class NavoicaApiConfig(AppConfig):
     """
     name = u'navoica_api'
 
+    def ready(self):
+        from navoica_api.certificates.signals import handle_generating_cert_awarded
+        handle_generating_cert_awarded #signal need to be imported after module is ready instead signal wont works
+
     # plugin_app = {
     #     PluginURLs.CONFIG: {
     #         ProjectType.LMS: {
