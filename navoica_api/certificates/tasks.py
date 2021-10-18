@@ -12,20 +12,33 @@ from navoica_api.certificates.functions import render_pdf, merging_all_course_ce
 
 TASK_LOG = logging.getLogger('edx.celery.task')
 
-@task(bind=True, max_retries=3,default_retry_delay=60*5)
-def render_pdf_cert_by_pk(self, certificate_pk):
 
+@task(bind=True, max_retries=3, default_retry_delay=60 * 5)
+def render_pdf_cert_by_pk(self, certificate_pk):
     certificate = GeneratedCertificate.objects.get(
         pk=certificate_pk
     )
 
-    r = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate.verify_uuid))
+    if not certificate.download_url and certificate.status == 'downloadable':
 
-    if r.status_code == 200:
-        certificate = render_pdf(html=r.content, certificate_pk=certificate_pk)
-        if certificate:
-            return certificate
-    self.retry()
+        TASK_LOG.info(
+            "Certificates: Generating pdf for cert {}".format(
+                certificate.pk))
+
+        r = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP, certificate.verify_uuid))
+
+        if r.status_code == 200:
+            certificate = render_pdf(html=r.content, certificate_pk=certificate_pk)
+            if certificate:
+                return certificate
+        TASK_LOG.info(
+            "Certificates: Retry generating pdf for cert {}".format(
+                certificate.pk))
+        self.retry()
+    else:
+        TASK_LOG.info(
+            "Certificates: Skipping generate pdf for cert {}due to download_url exists or status is not downloadable".format(
+                certificate.pk))
 
 
 @task(base=BaseInstructorTask, queue=settings.HIGH_PRIORITY_QUEUE)
