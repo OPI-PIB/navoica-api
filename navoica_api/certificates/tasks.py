@@ -4,24 +4,27 @@ import requests
 
 from celery import task
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser
-from django.test.client import RequestFactory
 from django.utils.translation import ugettext_noop
-from lms.djangoapps.certificates.views import render_cert_by_uuid
 from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.tasks_helper.runner import run_main_task
-
+from lms.djangoapps.certificates.models import GeneratedCertificate
 from navoica_api.certificates.functions import render_pdf, merging_all_course_certificates
 
 TASK_LOG = logging.getLogger('edx.celery.task')
 
 @task(bind=True, max_retries=3,default_retry_delay=60*5)
-def render_pdf_cert_by_uuid(self, certificate_uuid):
+def render_pdf_cert_by_pk(self, certificate_pk):
 
-    content = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate_uuid)).content
-    certificate = render_pdf(html=content,certificate_uuid=certificate_uuid)
-    if certificate:
-        return certificate
+    certificate = GeneratedCertificate.objects.get(
+        pk=certificate_pk
+    )
+
+    r = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP,certificate.verify_uuid))
+
+    if r.status_code == 200:
+        certificate = render_pdf(html=r.content, certificate_pk=certificate_pk)
+        if certificate:
+            return certificate
     self.retry()
 
 

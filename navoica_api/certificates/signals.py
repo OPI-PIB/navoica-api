@@ -2,7 +2,7 @@ import logging
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from openedx.core.djangoapps.signals.signals import COURSE_CERT_AWARDED
 from django.dispatch import receiver
-from navoica_api.certificates.tasks import render_pdf_cert_by_uuid
+from navoica_api.certificates.tasks import render_pdf_cert_by_pk
 
 log = logging.getLogger(__name__)
 
@@ -15,4 +15,4 @@ def handle_generating_cert_awarded(certificate, user, course_key, **kwargs):
             "Signal: COURSE_CERT_AWARDED Generating certificate: {} for course: {} and user: {}".format(certificate.pk,
                                                                                                         course_key,
                                                                                                         user.pk))
-        render_pdf_cert_by_uuid.delay(certificate.verify_uuid)
+        render_pdf_cert_by_pk.delay(certificate.pk)
