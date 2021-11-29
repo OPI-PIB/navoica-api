@@ -9,10 +9,10 @@ import logging
 from datetime import datetime, timedelta
 
 from completion.models import BlockCompletion
-from django.conf import settings
 from dateutil.parser import parse
-from courseware import courses  # pylint: disable=import-error
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import IntegrityError  # Import IntegrityError
 from django.http import HttpResponse
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
@@ -24,35 +24,37 @@ from edx_rest_framework_extensions.paginators import DefaultPagination
 from edx_rest_framework_extensions.permissions import IsUserInUrl
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.course_api.blocks.api import get_blocks
-from lms.djangoapps.courseware import courses
+from lms.djangoapps.courseware import courses  # pylint: disable=import-error
+from lms.djangoapps.courseware.courses import get_courses
 from navoica_api.api.permissions import (
-    IsCourseStaffInstructorOrStaff, IsCourseStaffInstructorOrUserInUrlOrStaff)
-from lms.djangoapps.course_api.blocks.api import get_blocks
+    IsCourseStaffInstructorOrStaff, IsCourseStaffInstructorOrUserInUrlOrStaff,
+    IsStaffOrOwner)
+from navoica_api.api.v1.serializers.certificate import \
+    GeneratedCertificateSerializer
+from navoica_api.api.v1.serializers.opinion import (
+    AdminCourseOpinionSerializer, CourseOpinionSerializer,
+    CreateCourseOpinionSerializer)
+from navoica_api.api.v1.serializers.user import UserSerializer
+from navoica_api.models import CourseRunOpinionModel
+from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from openedx.core.djangoapps.user_api.course_tag.api import get_course_tag
 from openedx.core.lib.api.authentication import \
     OAuth2AuthenticationAllowInactiveUser
 from openedx.features.course_experience.views.course_updates import \
     get_ordered_updates
-from openedx.core.lib.api import authentication
-from rest_framework import permissions
-from rest_framework import status
+from rest_framework import permissions, status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from six import text_type
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
-from rest_framework.views import APIView
-from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.exceptions import ItemNotFoundError
-
-from navoica_api.api.permissions import \
-    IsCourseStaffInstructorOrUserInUrlOrStaff
-from navoica_api.api.v1.serializers.certificate import GeneratedCertificateSerializer
-from navoica_api.api.v1.serializers.user import UserSerializer
 
 log = logging.getLogger(__name__)
 
@@ -60,11 +62,8 @@ log = logging.getLogger(__name__)
 class CourseProgressApiView(GenericAPIView):
     """
         **Use Case**
-
             * Get detail about course completion.
-
         **Example Request**
-
             GET /api/navoica/v1/progress/{username}/courses/{course_id}
 
         **GET Parameters**
@@ -167,7 +166,6 @@ class CourseProgressApiView(GenericAPIView):
                 status=404,
                 data={'detail': u'Not found.'}
             )
-
 
         block_navigation_types_filter = settings.BLOCK_NAVIGATION_TYPES_FILTER
 
@@ -446,17 +444,14 @@ class CourseUpdatesMessagesApiView(GenericAPIView):
 class UserApiView(APIView):
     """
             **Use Cases**
-
                 Get user's account information.
 
             **Example Requests**
-
                 GET /api/user/v1/me
 
             **Response Values for GET requests to the /me endpoint**
                 If the user is not logged in, an HTTP 401 "Not Authorized" response
                 is returned.
-
                 Otherwise, an HTTP 200 "OK" response is returned. The response
                 contains the following value:
 
@@ -469,7 +464,6 @@ class UserApiView(APIView):
                 "gender"
                 "year_of_birth"
                 "level_of_education"
-
         """
 
     authentication_classes = (
@@ -479,3 +473,86 @@ class UserApiView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class CourseRunOpinionViewSet(viewsets.ModelViewSet):
+    """
+    **Use Cases**
+        Restful CRUD operations on course opinions.
+
+    **Example Requests**
+
+        GET /api/navoica/v1/courseopinion/
+            returns all opinions
+        GET /api/navoica/v1/courseopinion?course_id=xx&username=yyy
+            returns opinions filtered by course_id and username
+        GET /api/navoica/v1/courseopinion/{id}
+            returns specified opinion
+
+        POST /api/navoica/v1/courseopinion
+            with payload
+            {
+                course_id = course-v1:course/course/run1,
+                grade = "5.0",
+                content = "very nice course"
+            }
+            adding new opinion
+        PUT /api/navoica/v1/courseopinion/{id}
+            modify opinion
+        DELETE /api/navoica/v1/courseopinion/{id}
+            delete specified opinion
+
+    **Response Values
+
+        GET: If the request is successful, an HTTP 200 "OK" response is returned
+        along with a list of opinions dictionaries filtered by course_id in query_parameter.
+        The details are contained in a JSON dictionary as follows:
+
+        Otherwise, an HTTP 200 "OK" response is returned. The response
+        contains the following value:
+
+        * id: The opinion identifier.
+        * course_id: The course identifier.
+        * grade: Opinion grade.
+        * content: Opinion content.
+        * user: The author of opinion.
+        * reviewed: reviwed status (default False).
+        * created: Date of the creation.
+        * last_udpated: Date of last modification.
+
+    """
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser, SessionAuthenticationAllowInactiveUser,
+                              JwtAuthentication,)
+    permission_classes = (IsAuthenticatedOrReadOnly, IsStaffOrOwner,)
+    serializer_class = CourseOpinionSerializer
+    lookup_field = 'id'
+    filter_backends = (OrderingFilter, DjangoFilterBackend, SearchFilter)
+    filterset_fields = ordering_fields = ('created',)
+
+    def get_queryset(self):
+        try:
+            filter_dict = {}
+            if course_key := (course_id := self.request.query_params.get('course_id')) and CourseKey.from_string(course_id):
+                filtered_courses_id = (course.id for course in get_courses(
+                    self.request.user, org=course_key.org) if course.number == course_key.course)
+                if filtered_courses_id:
+                    filter_dict['course_id__in'] = filtered_courses_id
+
+                if (username := self.request.query_params.get('username')):
+                    filter_dict['user__username'] = username
+            return CourseRunOpinionModel.objects.filter(**filter_dict)
+        except InvalidKeyError:
+            return CourseRunOpinionModel.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            raise ValidationError(detail='You can not add additional opinion for this course.')
+
+    def get_serializer_class(self):
+        if self.request.user.is_staff:
+            return AdminCourseOpinionSerializer
+        if self.action == 'create':
+            return CreateCourseOpinionSerializer
+        return CourseOpinionSerializer
