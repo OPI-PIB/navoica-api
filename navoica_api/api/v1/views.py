@@ -22,6 +22,7 @@ from edx_rest_framework_extensions.auth.session.authentication import \
     SessionAuthenticationAllowInactiveUser
 from edx_rest_framework_extensions.paginators import DefaultPagination
 from edx_rest_framework_extensions.permissions import IsUserInUrl
+from common.djangoapps.student.models import CourseEnrollment
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.course_api.blocks.api import get_blocks
 from lms.djangoapps.courseware import courses  # pylint: disable=import-error
@@ -55,7 +56,8 @@ from rest_framework.views import APIView
 from six import text_type
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
-
+from openedx.core.lib.api.view_utils import PaginatedAPIView, get_course_key, verify_course_exists
+from lms.djangoapps.grades.rest_api.v1.utils import GradeViewMixin
 log = logging.getLogger(__name__)
 
 
@@ -556,3 +558,64 @@ class CourseRunOpinionViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return CreateCourseOpinionSerializer
         return CourseOpinionSerializer
+
+
+class CourseGradesApiView(GradeViewMixin, APIView):
+    """
+    **Use Case**
+        * Get course grades of user if they are allowed.
+    **Example Request**
+        GET /api/grades/v1/courses/{course_id}/                              - Get grades for request user
+    **GET Parameters**
+        A GET request may include the following parameters.
+        * course_id: (required) A string representation of a Course ID.
+    **GET Response Values**
+        If the request for information about the course grade
+        is successful, an HTTP 200 "OK" response is returned.
+        The HTTP 200 response has the following values.
+        * username: A string representation of a user's username passed in the request.
+        * email: A string representation of a user's email.
+        * course_id: A string representation of a Course ID.
+        * passed: Boolean representing whether the course has been
+                  passed according to the course's grading policy.
+        * percent: A float representing the overall grade for the course
+        * letter_grade: A letter grade as defined in grading policy (e.g. 'A' 'B' 'C' for 6.002x) or None
+    **Example GET Response**
+        {
+            "username": "bob",
+            "email": "bob@example.com",
+            "course_id": "course-v1:edX+DemoX+Demo_Course",
+            "passed": false,
+            "percent": 0.03,
+            "letter_grade": null,
+        }
+    """
+    authentication_classes = (OAuth2AuthenticationAllowInactiveUser,
+                              SessionAuthenticationAllowInactiveUser,
+                              JwtAuthentication,)
+    permission_classes = (IsAuthenticated, )
+
+
+    @verify_course_exists
+    def get(self, request, course_id=None):
+        # Gets a course progress status.
+        # Args:
+        #     request (Request): Django request object.
+        #     course_id (string): URI element specifying the course location.
+        #                         Can also be passed as a GET parameter instead.
+        # Return:
+        #     A JSON serialized representation of the requesting user's current grade status.
+
+        course_key = get_course_key(request, course_id)
+        try:
+            CourseEnrollment.objects.get(user=request.user, course_id=course_key)
+        except CourseEnrollment.DoesNotExist:
+            raise self.api_error(
+                status_code=status.HTTP_404_NOT_FOUND,
+                developer_message='The user matching the requested username is not enrolled in this course',
+                error_code='user_not_enrolled'
+            )
+
+        with self._get_user_or_raise(request, course_key) as grade_user:
+            return self._get_single_user_grade(grade_user, course_key)
+
