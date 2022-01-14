@@ -157,7 +157,7 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.student.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data, {u"username": self.student.username,
-                                     u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                     u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                      u"completion_value": 0.0})
         self.client.logout()
 
@@ -184,7 +184,7 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.student.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data, {u"username": self.student.username,
-                                     u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                     u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                      u"completion_value": 0.0})
         self.client.logout()
 
@@ -197,7 +197,7 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.instructor_user.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data, {u"username": self.instructor_user.username,
-                                     u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                     u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                      u"completion_value": 0.0})
         self.client.logout()
 
@@ -206,7 +206,7 @@ class CourseProgressApiViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.student.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data, {u"username": self.student.username,
-                                     u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                     u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                      u"completion_value": 0.0})
         self.client.logout()
         # instructor user in another course, does not have access - should be 403
@@ -653,7 +653,7 @@ class UpdatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.student.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertDictEqual(resp.data, {u"username": self.student.username,
-                                         u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                         u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                          u"dismiss_url": self.get_dismiss_url(self.course.id),
                                          u"updates": {
                                              u"content": self.WELCOME_MESSAGE,
@@ -676,7 +676,7 @@ class UpdatesListViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.get(self.get_url(self.student.username, self.course.id))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertDictEqual(resp.data, {u"username": self.student.username,
-                                         u"course_id": self.course.id._to_deprecated_string(),  # pylint: disable=protected-access
+                                         u"course_id": text_type(self.course.id),  # pylint: disable=protected-access
                                          u"updates": [
                                              {
                                                  u"content": self.UPDATE_MESSAGE,
@@ -843,7 +843,7 @@ class CourseOpinionsViewTest(SharedModuleStoreTestCase, APITestCase):
 
         self.client.login(username=self.student.username, password=USER_PASSWORD)
         resp = self.client.post(self.get_url(action='create'), data=self.get_test_data(self.course_key))
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST) # TO DO: zmienić na 403 forbidden ?
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)  # TO DO: zmienić na 403 forbidden ?
         self.client.logout()
 
     def test_permission_can_modify_only_own_opinion(self):
@@ -869,13 +869,17 @@ class CourseOpinionsViewTest(SharedModuleStoreTestCase, APITestCase):
         opinion_id = resp.data.get('id', None)
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
-        resp = self.client.patch(self.get_url(action='partial_update', kwargs={'id': opinion_id}), data={'reviewed': True})
+        resp = self.client.patch(
+            self.get_url(action='partial_update', kwargs={'id': opinion_id}),
+            data={'reviewed': True})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data.get('reviewed'), False)
         self.client.logout()
 
         self.client.login(username=self.staff_user.username, password=USER_PASSWORD)
-        resp = self.client.patch(self.get_url(action='partial_update', kwargs={'id': opinion_id}), data={'reviewed': True})
+        resp = self.client.patch(
+            self.get_url(action='partial_update', kwargs={'id': opinion_id}),
+            data={'reviewed': True})
         self.assertEqual(resp.data.get('reviewed'), True)
         self.client.logout()
 
@@ -890,7 +894,8 @@ class CourseOpinionsViewTest(SharedModuleStoreTestCase, APITestCase):
         resp = self.client.post(self.get_url(action='create'), data=self.get_test_data(self.second_course_key))
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.client.logout()
-        resp = self.client.get(self.get_url(action='list', query_kwargs={'course_id': self.course_key, 'username': self.student.username}))
+        resp = self.client.get(self.get_url(action='list', query_kwargs={
+                               'course_id': self.course_key, 'username': self.student.username}))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(resp.data.get('results')[0].items(), self.get_test_data(self.course_key).items())
 
@@ -913,6 +918,134 @@ class CourseOpinionsViewTest(SharedModuleStoreTestCase, APITestCase):
     #     self.assertEqual(resp.status_code, status.HTTP_200_OK)
     #     self.assertEqual(len(resp.data.get('results')), 2)
         # sprawdź zawartość
+
+    def test_dot_valid_accesstoken(self):
+        """
+        Verify access with a valid Django Oauth Toolkit access token.
+        """
+        self.assert_oauth_status(self.dot_access_token, status.HTTP_200_OK)
+
+    def test_dot_invalid_accesstoken(self):
+        """
+        Verify the endpoint is inaccessible for authorization
+        attempts made with an invalid OAuth access token.
+        """
+        self.assert_oauth_status("fooooooooooToken", status.HTTP_401_UNAUTHORIZED)
+
+    def test_dot_expired_accesstoken(self):
+        """
+        Verify the endpoint is inaccessible for authorization
+        attempts made with an expired OAuth access token.
+        """
+        # set the expiration date in the past
+        self.dot_access_token.expires = datetime.utcnow() - timedelta(weeks=1)
+        self.dot_access_token.save()
+        self.assert_oauth_status(self.dot_access_token, status.HTTP_401_UNAUTHORIZED)
+
+
+class CourseGradesApiViewTest(SharedModuleStoreTestCase, APITestCase):
+    """
+    Test for the Progress REST APIs
+    """
+    now = timezone.now()
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.course = CourseFactory.create(
+            org='edx',
+            number='verified',
+            display_name='Verified Course'
+        )
+
+    def setUp(self):
+        freezer = freeze_time(self.now)
+        freezer.start()
+        self.addCleanup(freezer.stop)
+
+        super().setUp()
+
+        self.student = UserFactory(password=USER_PASSWORD)
+        self.second_student = UserFactory(password=USER_PASSWORD)
+
+        self.enrollment = CourseEnrollmentFactory.create(
+            user=self.student,
+            course_id=self.course.id)
+
+        self.namespaced_url = 'navoica_api:v1:grades_api:detail'
+
+        # create a configuration for django-oauth-toolkit (DOT)
+        dot_app_user = UserFactory.create(password=USER_PASSWORD)
+        dot_app = dot_models.Application.objects.create(
+            name='test app',
+            user=dot_app_user,
+            client_type='confidential',
+            authorization_grant_type='authorization-code',
+            redirect_uris='http://localhost:8079/complete/edxorg/'
+        )
+        self.dot_access_token = dot_models.AccessToken.objects.create(
+            user=self.student,
+            application=dot_app,
+            expires=datetime.utcnow() + timedelta(weeks=1),
+            scope='read write',
+            token='16MGyP3OaQYHmpT1lK7Q6MMNAZsjwF'
+        )
+
+    def get_url(self, course_id):
+        """
+        Helper function to create the url for progress
+        """
+        return reverse(
+            self.namespaced_url,
+            kwargs={
+                'course_id': course_id,
+            }
+        )
+
+    def assert_oauth_status(self, access_token, expected_status):
+        """
+        Helper method for requests with OAUTH token
+        """
+        self.client.logout()
+        auth_header = "Bearer {0}".format(access_token)
+        response = self.client.get(self.get_url(self.course.id), HTTP_AUTHORIZATION=auth_header)
+        self.assertEqual(response.status_code, expected_status)
+
+    def test_student_permissions(self):
+        """
+        Test that the owner has access to own progress status
+        """
+        # unauthorized student - should be 401
+        resp = self.client.get(self.get_url(self.course.id))
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # authorized user, own value - should be 200
+        self.client.login(username=self.student.username, password=USER_PASSWORD)
+        resp = self.client.get(self.get_url(self.course.id))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data, [{"username": self.student.username,
+                                     "email": '',
+                                     "course_id": text_type(self.course.id),  # pylint: disable=protected-access
+                                     "passed": False,
+                                     "percent": 0.0,
+                                     "letter_grade": None}])
+        self.client.logout()
+
+        # unenrolled user, should be 404
+        self.client.login(username=self.second_student.username, password=USER_PASSWORD)
+        resp = self.client.get(self.get_url(self.course.id))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(resp.data, {'developer_message': 'The user matching the requested username is not enrolled in this course', 'error_code': 'user_not_enrolled'})
+        self.client.logout()
+
+
+        # course not exist - should be 404
+        self.client.login(username=self.student.username, password=USER_PASSWORD)
+        resp = self.client.get(self.get_url('does/not/exist'))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(resp.data, {'developer_message': 'Requested grade for unknown course does/not/exist', 'error_code': 'course_does_not_exist'})
+        self.client.logout()
+
 
     def test_dot_valid_accesstoken(self):
         """
