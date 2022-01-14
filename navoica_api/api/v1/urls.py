@@ -46,6 +46,14 @@ USER_URLS = ([
 ], 'user_api')
 
 
+GRADE_URLS = ([
+    url(
+        r'^courses/{course_id}/$'.format(course_id=settings.COURSE_ID_PATTERN),
+        views.CourseGradesApiView.as_view(),
+        name='detail'
+    ),
+], 'grades_api')
+
 router = routers.SimpleRouter()
 router.register(r'courseopinions', views.CourseRunOpinionViewSet, basename='courseopinion')
 
@@ -55,6 +63,6 @@ urlpatterns = [
     url(r'^certificates/', include(CERTIFICATES_URLS)),
     url(r'^updates/', include(UPDATEMESSAGES_URLS)),
     url(r'^branding/', include(BRANDING_URLS)),
-    url(r'^branding/', include(BRANDING_URLS)),
+    url(r'^grades/', include(GRADE_URLS)),
     url(r'^', include(router.urls)),
 ]
