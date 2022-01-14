@@ -3,16 +3,17 @@ Permissions classes for the API.
 """
 from __future__ import absolute_import, unicode_literals
 
-from rest_framework import permissions
-
+from common.djangoapps.student.roles import (  # pylint: disable=import-error
+    CourseInstructorRole, CourseStaffRole)
 from openedx.core.lib.api.permissions import IsUserInUrlOrStaff
-from student.roles import CourseInstructorRole, CourseStaffRole # pylint: disable=import-error
+from rest_framework import permissions
 
 
 class IsCourseStaffInstructorOrUserInUrlOrStaff(IsUserInUrlOrStaff):
     """
     Permission that checks to see if the request user matches the user in the URL.
     """
+
     def has_object_permission(self, request, view, obj):
         if (hasattr(request, 'user') and
                 # either the user is a staff or instructor of the master course
@@ -24,7 +25,8 @@ class IsCourseStaffInstructorOrUserInUrlOrStaff(IsUserInUrlOrStaff):
                  and hasattr(obj, 'coach') and obj.coach == request.user)):
             return True
 
-        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view).has_permission(request, view) # because IsUserinUrlorStaff return permission class ...
+        # because IsUserinUrlorStaff return permission class ...
+        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view).has_permission(request, view)
 
     def has_permission(self, request, view):
         return True
@@ -34,6 +36,7 @@ class IsCourseStaffInstructorOrStaff(permissions.BasePermission):
     """
     Permission that checks to see if the request user matches the user in the URL.
     """
+
     def has_object_permission(self, request, view, obj):
         if (hasattr(request, 'user') and
                 # either the user is a staff or instructor of the master course
@@ -45,3 +48,12 @@ class IsCourseStaffInstructorOrStaff(permissions.BasePermission):
                  and hasattr(obj, 'coach') and obj.coach == request.user)) or request.user.is_staff:
             return True
 
+
+class IsStaffOrOwner(permissions.BasePermission):
+    """
+    Permission that allows access to admin users or the owner of an object.
+    The owner is considered the User object represented by obj.user.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_staff or obj.user == request.user

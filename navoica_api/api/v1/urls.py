@@ -4,7 +4,7 @@ Navoica API URLs.
 from django.conf import settings
 from django.conf.urls import include, url
 from navoica_api.api.v1.branding.urls import BRANDING_URLS
-
+from rest_framework import routers
 from navoica_api.api.v1 import views
 from navoica_api.api.v1.views import UserApiView
 
@@ -45,10 +45,24 @@ USER_URLS = ([
     ),
 ], 'user_api')
 
+
+GRADE_URLS = ([
+    url(
+        r'^courses/{course_id}/$'.format(course_id=settings.COURSE_ID_PATTERN),
+        views.CourseGradesApiView.as_view(),
+        name='detail'
+    ),
+], 'grades_api')
+
+router = routers.SimpleRouter()
+router.register(r'courseopinions', views.CourseRunOpinionViewSet, basename='courseopinion')
+
 urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS, namespace='progress')),
     url(r'^user/', include(USER_URLS, namespace='user')),
     url(r'^certificates/', include(CERTIFICATES_URLS)),
     url(r'^updates/', include(UPDATEMESSAGES_URLS)),
     url(r'^branding/', include(BRANDING_URLS)),
+    url(r'^grades/', include(GRADE_URLS)),
+    url(r'^', include(router.urls)),
 ]

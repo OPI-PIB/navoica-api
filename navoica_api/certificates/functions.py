@@ -3,7 +3,7 @@ import os
 from shutil import make_archive
 from time import time
 from urllib.parse import urlparse
-
+import uuid
 import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
@@ -17,7 +17,7 @@ from navoica_api.models import CertificateGenerationMergeHistory
 
 log = logging.getLogger(__name__)
 
-def render_pdf(html,certificate_uuid):
+def render_pdf(html, certificate_pk):
 
     soup = BeautifulSoup(html, "html.parser")
 
@@ -54,9 +54,9 @@ def render_pdf(html,certificate_uuid):
     r = requests.post(settings.GOTENBERG_URL + 'convert/html', files=multipart_form_data)
 
     if r.status_code == 200:
-        path = default_storage.save('certificates/'+certificate_uuid+".pdf", ContentFile(r.content))
+        path = default_storage.save('certificates/'+str(uuid.uuid4())+'.pdf', ContentFile(r.content))
         certificate = GeneratedCertificate.objects.get(
-            verify_uuid=certificate_uuid
+            pk=certificate_pk
         )
         certificate.download_url = default_storage.url(path)
         certificate.save(update_fields=['download_url'])
