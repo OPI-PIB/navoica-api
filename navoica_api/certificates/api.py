@@ -10,7 +10,7 @@ from lms.djangoapps.instructor_task.api_helper import (
     check_entrance_exam_problems_for_rescoring,
     encode_entrance_exam_and_student_input, encode_problem_and_student_input,
     submit_task)
-from util.json_request import JsonResponse
+from common.djangoapps.util.json_request import JsonResponse
 from django.utils.translation import ugettext as _
 
 from navoica_api.models import CertificateGenerationMergeHistory

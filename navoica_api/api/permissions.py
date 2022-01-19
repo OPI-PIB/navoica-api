@@ -26,7 +26,7 @@ class IsCourseStaffInstructorOrUserInUrlOrStaff(IsUserInUrlOrStaff):
             return True
 
         # because IsUserinUrlorStaff return permission class ...
-        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view).has_permission(request, view)
+        return super(IsCourseStaffInstructorOrUserInUrlOrStaff, self).has_permission(request, view)
 
     def has_permission(self, request, view):
         return True
