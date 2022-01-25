@@ -6,6 +6,7 @@ from django.conf.urls import include, url
 from navoica_api.api.v1.branding.urls import BRANDING_URLS
 from rest_framework import routers
 from navoica_api.api.v1 import views
+from navoica_api.api.v1.course.urls import COURSES_URLS
 from navoica_api.api.v1.views import UserApiView
 
 app_name = 'v1'
@@ -64,5 +65,6 @@ urlpatterns = [
     url(r'^updates/', include(UPDATEMESSAGES_URLS)),
     url(r'^branding/', include(BRANDING_URLS)),
     url(r'^grades/', include(GRADE_URLS)),
+    url(r'^courses_list/', include(COURSES_URLS)),
     url(r'^', include(router.urls)),
 ]
