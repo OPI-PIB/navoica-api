@@ -1,5 +1,5 @@
 from rest_framework.generics import ListAPIView
-from openedx.core.djangoapps.enrollments.serializers import CourseSerializer
+from lms.djangoapps.course_api.serializers import CourseSerializer
 from lms.djangoapps.course_api.views import CourseDetailView, CourseListUserThrottle
 from lms.djangoapps import branding
 from lms.djangoapps.courseware.access import _can_enroll_courselike
@@ -37,48 +37,37 @@ class UnEnrollmentCourseListView(ListAPIView):
 
             [
                 {
-                    "course_id": "course-v1:Test+Test+Test",
-                    "course_name": "Test",
+                    "blocks_url": "https://dev-04.kdm/api/courses/v2/blocks/?course_id=course-v1%3AedX%2BDemoX%2BDemo_Course",
+                    "effort": null,
+                    "end": null,
                     "enrollment_start": null,
                     "enrollment_end": null,
-                    "course_start": "2030-01-01T00:00:00Z",
-                    "course_end": null,
-                    "invite_only": false,
-                    "course_modes": [
-                        {
-                            "slug": "audit",
-                            "name": "Audit",
-                            "min_price": 0,
-                            "suggested_prices": "",
-                            "currency": "usd",
-                            "expiration_datetime": null,
-                            "description": null,
-                            "sku": null,
-                            "bulk_sku": null
+                    "id": "course-v1:edX+DemoX+Demo_Course",
+                    "media": {
+                        "course_image": {
+                            "uri": "/asset-v1:edX+DemoX+Demo_Course+type@asset+block@images_course_image.jpg"
+                        },
+                        "course_video": {
+                            "uri": null
+                        },
+                        "image": {
+                            "raw": "https://dev-04.kdm/asset-v1:edX+DemoX+Demo_Course+type@asset+block@images_course_image.jpg",
+                            "small": "https://dev-04.kdm/asset-v1:edX+DemoX+Demo_Course+type@asset+block@images_course_image.jpg",
+                            "large": "https://dev-04.kdm/asset-v1:edX+DemoX+Demo_Course+type@asset+block@images_course_image.jpg"
                         }
-                    ]
-                },
-                {
-                    "course_id": "course-v1:edX+E2E-101+course",
-                    "course_name": "E2E Test Course",
-                    "enrollment_start": null,
-                    "enrollment_end": null,
-                    "course_start": "2016-01-01T00:00:00Z",
-                    "course_end": "2028-12-31T00:00:00Z",
-                    "invite_only": false,
-                    "course_modes": [
-                        {
-                            "slug": "audit",
-                            "name": "Audit",
-                            "min_price": 0,
-                            "suggested_prices": "",
-                            "currency": "usd",
-                            "expiration_datetime": null,
-                            "description": null,
-                            "sku": null,
-                            "bulk_sku": null
-                        }
-                    ]
+                    },
+                    "name": "Demonstration Course",
+                    "number": "DemoX",
+                    "org": "edX",
+                    "short_description": null,
+                    "start": "2013-02-05T05:00:00Z",
+                    "start_display": "Feb. 5, 2013",
+                    "start_type": "timestamp",
+                    "pacing": "instructor",
+                    "mobile_available": false,
+                    "hidden": false,
+                    "invitation_only": false,
+                    "course_id": "course-v1:edX+DemoX+Demo_Course"
                 }
             ]
         """
