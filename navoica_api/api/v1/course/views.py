@@ -85,9 +85,9 @@ class UnEnrollmentCourseListView(ListAPIView):
         Return courses visible and unenrollment to the user.
         """
         now = datetime.now(UTC)
-
+        courses = branding.get_visible_courses()
         # there is missing one situation when: now > start && enrollment_start is null & enrollment_end is null
-        courses = CourseOverview.objects.filter(Q(enrollment_start__lte=now) | Q(enrollment_start__isnull=True)).filter(
+        courses = courses.filter(Q(enrollment_start__lte=now) | Q(enrollment_start__isnull=True)).filter(
             Q(enrollment_end__gte=now) | Q(enrollment_end__isnull=True)).filter(
             Q(end__gte=now) | Q(end__isnull=True)).order_by("-start")
 
