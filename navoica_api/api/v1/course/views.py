@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework.generics import ListAPIView
 from lms.djangoapps.course_api.serializers import CourseSerializer
 from lms.djangoapps.course_api.views import CourseDetailView, CourseListUserThrottle
@@ -8,6 +10,9 @@ from lms.djangoapps.courseware.access_utils import (
     ACCESS_GRANTED,
 )
 from common.djangoapps.student.models import CourseEnrollment
+from pytz import UTC
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from django.db.models import Q
 
 
 class UnEnrollmentCourseListView(ListAPIView):
@@ -79,16 +84,23 @@ class UnEnrollmentCourseListView(ListAPIView):
         """
         Return courses visible and unenrollment to the user.
         """
+        now = datetime.now(UTC)
         courses = branding.get_visible_courses()
-        courses = courses.order_by("-start")
+        # there is missing one situation when: now > start && enrollment_start is null & enrollment_end is null
+        courses = courses.filter(Q(enrollment_start__lte=now) | Q(enrollment_start__isnull=True)).filter(
+            Q(enrollment_end__gte=now) | Q(enrollment_end__isnull=True)).filter(
+            Q(end__gte=now) | Q(end__isnull=True)).order_by("-start")
 
         user = self.request.user
 
         return_courses = []
 
         for course in courses:
-            if _can_enroll_courselike(user, course) == ACCESS_GRANTED and not CourseEnrollment.is_enrolled(user,
-                                                                                                           course.id):
+
+            if not (
+                    course.enrollment_start is None and course.enrollment_end is None and course.start > now) and _can_enroll_courselike(
+                    user, course) == ACCESS_GRANTED and not CourseEnrollment.is_enrolled(user,
+                                                                                         course.id):
                 return_courses.append(course)
                 if self.request.GET.get('size') and len(return_courses) >= int(self.request.GET.get('size')):
                     break
