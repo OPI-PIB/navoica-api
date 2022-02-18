@@ -32,11 +32,13 @@ from navoica_api.api.permissions import (
     IsStaffOrOwner)
 from navoica_api.api.v1.serializers.certificate import \
     GeneratedCertificateSerializer
+from navoica_api.api.v1.serializers.career import \
+    CareerSerializer
 from navoica_api.api.v1.serializers.opinion import (
     AdminCourseOpinionSerializer, CourseOpinionSerializer,
     CreateCourseOpinionSerializer)
 from navoica_api.api.v1.serializers.user import UserSerializer
-from navoica_api.models import CourseRunOpinionModel
+from navoica_api.models import CareerModel, CourseRunOpinionModel
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from openedx.core.djangoapps.user_api.course_tag.api import get_course_tag
@@ -619,3 +621,15 @@ class CourseGradesApiView(GradeViewMixin, APIView):
         with self._get_user_or_raise(request, course_key) as grade_user:
             return self._get_single_user_grade(grade_user, course_key)
 
+
+class CareerViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A simple ViewSet for viewing career.
+    """
+    serializer_class = CareerSerializer
+    filter_backends = (OrderingFilter, DjangoFilterBackend, SearchFilter)
+    lookup_field = 'id'
+    filterset_fields = search_fields = ordering_fields = '__all__'
+
+    def get_queryset(self):
+        return CareerModel.objects.filter(publish=True)
