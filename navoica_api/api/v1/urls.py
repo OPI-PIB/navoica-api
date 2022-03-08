@@ -33,7 +33,7 @@ UPDATEMESSAGES_URLS = ([
     url(r'^{username}/courses/{course_id}/$'.format(
         username=settings.USERNAME_PATTERN,
         course_id=settings.COURSE_ID_PATTERN,
-        ),
+    ),
         views.CourseUpdatesMessagesApiView.as_view(),
         name='list'),
 ],   'updates')
@@ -57,6 +57,7 @@ GRADE_URLS = ([
 
 router = routers.SimpleRouter()
 router.register(r'courseopinions', views.CourseRunOpinionViewSet, basename='courseopinion')
+router.register(r'career',  views.CareerViewSet, basename='career')
 
 urlpatterns = [
     url(r'^progress/', include(PROGRESS_URLS, namespace='progress')),
