@@ -33,6 +33,7 @@ def _footer_navigation_links():
             ("faq", "/faq", _("FAQ")),
             ("accessibility", "/accessibility", _("Accessibility Statement")),
             ("legend", "/legend", _("Legend_title")),
+            ("career", "/career", _("Career")),
         ]
         if link_url and link_url != "#"
     ]
