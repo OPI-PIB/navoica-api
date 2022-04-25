@@ -1,13 +1,16 @@
 import logging
 from functools import partial
-import requests
 
+import requests
 from celery import task
 from django.conf import settings
 from django.utils.translation import ugettext_noop
+from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.tasks_helper.runner import run_main_task
-from lms.djangoapps.certificates.models import GeneratedCertificate
+from openedx.core.djangoapps.certificates.api import certificates_viewable_for_course
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+
 from navoica_api.certificates.functions import render_pdf, merging_all_course_certificates
 
 TASK_LOG = logging.getLogger('edx.celery.task')
@@ -19,7 +22,10 @@ def render_pdf_cert_by_pk(self, certificate_pk):
         pk=certificate_pk
     )
 
-    if not certificate.download_url and certificate.status == 'downloadable':
+    course = CourseOverview.objects.get(pk=certificate.course_id)
+
+    if not certificate.download_url and certificate.status == 'downloadable' and certificates_viewable_for_course(
+            course):
 
         TASK_LOG.info(
             "Certificates: Generating pdf for cert {}".format(
@@ -37,7 +43,7 @@ def render_pdf_cert_by_pk(self, certificate_pk):
         self.retry()
     else:
         TASK_LOG.info(
-            "Certificates: Skipping generate pdf for cert {}due to download_url exists or status is not downloadable".format(
+            "Certificates: Skipping generate pdf for cert {} due to download_url exists or status is not downloadable or certificates is not viewable for course".format(
                 certificate.pk))
 
 
