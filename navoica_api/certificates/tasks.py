@@ -34,9 +34,9 @@ def render_pdf_cert_by_pk(self, certificate_pk):
         r = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP, certificate.verify_uuid))
 
         if r.status_code == 200:
-            certificate = render_pdf(html=r.content, certificate_pk=certificate_pk)
-            if certificate:
-                return certificate
+            cert = render_pdf(html=r.content, certificate_pk=certificate_pk)
+            if cert:
+                return cert
         TASK_LOG.info(
             "Certificates: Retry generating pdf for cert {}".format(
                 certificate.pk))
