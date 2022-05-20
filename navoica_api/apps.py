@@ -3,7 +3,7 @@ Config of navoica API app
 '''
 from __future__ import unicode_literals
 from django.apps import AppConfig
-
+from django.db.models.signals import post_save
 
 class NavoicaApiConfig(AppConfig):
     """
@@ -12,7 +12,8 @@ class NavoicaApiConfig(AppConfig):
     name = u'navoica_api'
 
     def ready(self):
-        pass
+        from navoica_api.certificates.signals.handlers import update_cert
+        post_save.connect(update_cert)
 
     # plugin_app = {
     #     PluginURLs.CONFIG: {
