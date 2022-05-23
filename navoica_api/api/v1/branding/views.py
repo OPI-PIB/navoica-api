@@ -1,10 +1,11 @@
 """Views for the branding app. """
 
 import logging
+from datetime import date
+from typing import Dict, List
+from xmlrpc.client import boolean
 
-import lms.djangoapps.branding.api as branding_api
 import six
-from common.djangoapps.util.json_request import JsonResponse
 from django.conf import settings
 from django.core.cache import cache
 from django.http import Http404, HttpResponse
@@ -12,17 +13,16 @@ from django.utils import translation
 from django.utils.translation import ugettext as _
 from django.utils.translation.trans_real import get_supported_language_variant
 from django.views.decorators.cache import cache_control
+import lms.djangoapps.branding.api as branding_api
+from common.djangoapps.util.json_request import JsonResponse
 from lms.djangoapps.branding.views import _render_footer_html
 from openedx.core.djangoapps.lang_pref.api import released_languages
-from openedx.core.djangoapps.site_configuration import \
-    helpers as configuration_helpers
 
 log = logging.getLogger(__name__)
 
 
-def _footer_navigation_links():
+def _footer_navigation_links() -> List[Dict[str, str]]:
     """Return the navigation links to display in the footer. """
-    platform_name = configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME)
     return [
         {
             "name": link_name,
@@ -39,8 +39,8 @@ def _footer_navigation_links():
     ]
 
 
-def _footer_legal_links():
-
+def _footer_legal_links() -> List[Dict[str, str]]:
+    """Legal links"""
     links = [
         ('tos', '/tos', _('Terms of use')),
         ('honor', '/honor', _('Honor code')),
@@ -59,9 +59,8 @@ def _footer_legal_links():
     ]
 
 
-def _footer_connect_links():
-    """Return the connect links to display in the footer. """
-
+def _footer_connect_links() -> List[Dict[str, str]]:
+    """Connect links """
     return [
         {
             "name": link_name,
@@ -75,11 +74,65 @@ def _footer_connect_links():
     ]
 
 
-def get_navoica_footer(is_secure=True):
+def _footer_copyright() -> str:
+    """ Navoica copyright message """
+    current_year = date.today().year
+    current_version = settings.PLATFORM_VERSION
+    return f'© 2018-{current_year} Navoica.pl | {current_version}'
+
+
+def _footer_navoica_link() -> Dict[str, str]:
+    """Navoica link with custom text message"""
+    platform_url = settings.LMS_ROOT_URL
+    return {
+        "url": f'{platform_url}',
+        "text": _("Polish MOOC platform offering free of charge online courses for every registered user.")
+    }
+
+
+def get_patron_url(name: str, is_secure: boolean = True) -> str:
+    """ This method return url of patron, based on language
+    Patron logo need to be in format "logo_{name}.png" / "logo_en_{name}.png"
+    """
+    if translation.get_language() == 'pl':
+        logo_prefix = "logo"
+    else:
+        logo_prefix = "logo_en"
+    image_path = 'images/patrons/'+logo_prefix+f'_{name}.png'
+
+    return branding_api._absolute_url_staticfile(is_secure, image_path)
+
+
+def _footer_patrons_links(is_secure: boolean = True) -> List[Dict[str, str]]:
+    """ This method return list of the patrons based on NAVOICA_PATRONS variable.
+    Variable is rewritten for i18n purposes
+    """
+    patrons = getattr(settings, 'NAVOICA_PATRONS', {})
+    patrons_links = []
+    for name, partner in patrons.items():
+        patrons_links.append({
+            'title': six.text_type(partner.get('title', '')),
+            'name': six.text_type(partner.get('name', '')),
+            'url': six.text_type(partner.get('url', '')),
+            'image_url': get_patron_url(name, is_secure)
+        })
+    return patrons_links
+
+
+def get_navoica_footer(is_secure=True) -> Dict:
+    """ Navoica footer """
+    # get openedx footer
     footer_dict = branding_api.get_footer(is_secure)
+    # remove openedx/edx links
+    del footer_dict['edx_org_link']
+    del footer_dict['openedx_link']
+    # override/add new fields to footer
     footer_dict['navigation_links'] = _footer_navigation_links()
     footer_dict['legal_links'] = _footer_legal_links()
     footer_dict['connect_links'] = _footer_connect_links()
+    footer_dict['copyright'] = _footer_copyright()
+    footer_dict['opi_navoica_link'] = _footer_navoica_link()
+    footer_dict['patrons_links'] = _footer_patrons_links(is_secure=is_secure)
     return footer_dict
 
 
@@ -150,7 +203,19 @@ def navoica_footer(request):
                 "image": "http://example.com/openedx.png"
             },
             "logo_image": "http://example.com/static/images/logo.png",
-            "copyright": "edX, Open edX and their respective logos are registered trademarks of edX Inc."
+            "copyright": "edX, Open edX and their respective logos are registered trademarks of edX Inc.",
+            "patrons_links": [
+                {
+                    "title": "Ministerstwo Edukacji i Nauki",
+                    "name": "mein",
+                    "url": "http://www.nauka.gov.pl/",
+                    "image_url": "https://dev-02.kdm/static/images/patrons/logo_mein.png"
+                },
+            ],
+            "opi_navoica_link": {
+                "url": "https://dev-02.kdm",
+                "text": "Ogólnopolska, bezpłatna platforma edukacyjna z kursami typu MOOC"
+                },
         }
 
 
