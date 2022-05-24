@@ -13,7 +13,7 @@ class NavoicaApiConfig(AppConfig):
 
     def ready(self):
         from navoica_api.certificates.signals.handlers import update_cert
-        post_save.connect(update_cert)
+        # post_save.connect(update_cert)
 
     # plugin_app = {
     #     PluginURLs.CONFIG: {
