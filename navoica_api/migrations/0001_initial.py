@@ -14,7 +14,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('instructor_task', '0003_alter_task_input_field'),
     ]
 
     operations = [
