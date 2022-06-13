@@ -11,7 +11,7 @@ from lms.djangoapps.instructor_task.tasks_helper.runner import run_main_task
 from lms.djangoapps.certificates.api import certificates_viewable_for_course
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
-from navoica_api.certificates.functions import render_pdf
+from navoica_api.certificates.functions import render_pdf, merging_all_course_certificates
 
 TASK_LOG = logging.getLogger('edx.celery.task')
 
@@ -49,8 +49,6 @@ def render_pdf_cert_by_pk(self, certificate_pk):
 
 @shared_task(base=BaseInstructorTask, queue=settings.HIGH_PRIORITY_QUEUE)
 def merge_all_certificates(entry_id, xmodule_instance_args):
-    from navoica_api.certificates.functions import merging_all_course_certificates
-
     """
     Grade students and generate certificates.
     """
