@@ -123,3 +123,30 @@ class UnEnrollmentCourseListView(ListAPIView):
                     user, course) == ACCESS_DENIED or CourseEnrollment.is_enrolled(user, course.id):
                 courses = courses.exclude(pk=str(course.id))
         return courses
+
+class HomeCourses(ListAPIView):
+    """
+    **Use Cases**
+
+        Request 8 new courses for homepage
+
+    **Example Requests**
+
+        GET /api/navoica/v1/courses_list/home_courses
+
+    **Response Values**
+
+        List of objects using CourseSerializer
+
+    **Returns**
+
+        * 200 on success, with a list of course discovery objects as returned using CourseSerializer.
+        """
+
+    def get_queryset(self):
+        """
+        Return 8 new courses for homepage.
+        """
+        from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+        courses = CourseOverview.get_all_courses()
+        return courses.order_by('id')[:8]
