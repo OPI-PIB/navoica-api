@@ -123,30 +123,3 @@ class UnEnrollmentCourseListView(ListAPIView):
                     user, course) == ACCESS_DENIED or CourseEnrollment.is_enrolled(user, course.id):
                 courses = courses.exclude(pk=str(course.id))
         return courses
-
-def PowerFormCheck(request):
-    """
-    **Use Cases**
-
-        Check if lesson has Power Form active
-
-    **Example Requests**
-
-        GET /api/navoica/v1/courses_list/PowerFormCheck?course_id=123
-
-    **Response Values**
-
-        Boolean value True or False
-
-    **Returns**
-
-        * 200 on success.
-    """
-    
-    course_id = request.GET.get('course_id', '')
-
-    course = modulestore().get_course(course_id)
-    if course.other_course_settings.get('external_enroll') or course.other_course_settings.get('external_enroll').get('value'):
-        return True
-    else:
-        return False

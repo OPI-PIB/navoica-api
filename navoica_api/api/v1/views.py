@@ -633,3 +633,39 @@ class CareerViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return CareerModel.objects.filter(publish=True)
+
+class PowerFormApiView(APIView):
+    """
+    **Use Cases**
+
+        Check if lesson has Power Form active
+
+    **Example Requests**
+
+        GET /api/powerformcheck/v1/{course_id}/
+
+    **GET Parameters**
+        A GET request may include the following parameters.
+        * course_id: (required) A string representation of a Course ID.
+
+    **Response Values**
+
+        Boolean value True or False
+
+    **Returns**
+
+        * 200 on success.
+    """
+
+    authentication_classes = (
+        OAuth2AuthenticationAllowInactiveUser, SessionAuthenticationAllowInactiveUser, JwtAuthentication
+    )
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, course_id=None):
+        course_key = get_course_key(request, course_id)
+        course = modulestore().get_course(course_key)
+        if course.other_course_settings.get('external_enroll') or course.other_course_settings.get('external_enroll').get('value'):
+            power = True
+        power = False
+        return Response({"power": power})
