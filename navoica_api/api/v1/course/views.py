@@ -124,29 +124,29 @@ class UnEnrollmentCourseListView(ListAPIView):
                 courses = courses.exclude(pk=str(course.id))
         return courses
 
-class HomeCourses(ListAPIView):
+def PowerFormCheck(request):
     """
     **Use Cases**
 
-        Request 8 new courses for homepage
+        Check if lesson has Power Form active
 
     **Example Requests**
 
-        GET /api/navoica/v1/courses_list/home_courses
+        GET /api/navoica/v1/courses_list/PowerFormCheck?course_id=123
 
     **Response Values**
 
-        List of objects using CourseSerializer
+        Boolean value True or False
 
     **Returns**
 
-        * 200 on success, with a list of course discovery objects as returned using CourseSerializer.
-        """
+        * 200 on success.
+    """
+    
+    course_id = request.GET.get('course_id', '')
 
-    def get_queryset(self):
-        """
-        Return 8 new courses for homepage.
-        """
-        from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
-        courses = CourseOverview.get_all_courses()
-        return courses.order_by('id')[:8]
+    course = modulestore().get_course(course_id)
+    if course.other_course_settings.get('external_enroll') or course.other_course_settings.get('external_enroll').get('value'):
+        return True
+    else:
+        return False
