@@ -11,7 +11,10 @@ class NavoicaApiConfig(AppConfig):
     name = u'navoica_api'
 
     def ready(self):
+        # noinspection PyUnresolvedReferences
         from navoica_api.certificates.signals.handlers import update_cert
+        # noinspection PyUnresolvedReferences
+        from navoica_api.videos.signals.handlers import encode_video_recv
 
     # plugin_app = {
     #     PluginURLs.CONFIG: {
