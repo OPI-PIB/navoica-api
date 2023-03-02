@@ -2,13 +2,13 @@ import logging
 from functools import partial
 
 import requests
-from celery import task
+from celery import shared_task
 from django.conf import settings
 from django.utils.translation import ugettext_noop
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.tasks_helper.runner import run_main_task
-from openedx.core.djangoapps.certificates.api import certificates_viewable_for_course
+from lms.djangoapps.certificates.api import certificates_viewable_for_course
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
 from navoica_api.certificates.functions import render_pdf, merging_all_course_certificates
@@ -16,7 +16,7 @@ from navoica_api.certificates.functions import render_pdf, merging_all_course_ce
 TASK_LOG = logging.getLogger('edx.celery.task')
 
 
-@task(bind=True, max_retries=3, default_retry_delay=60 * 5)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60 * 5)
 def render_pdf_cert_by_pk(self, certificate_pk):
     certificate = GeneratedCertificate.objects.get(
         pk=certificate_pk
@@ -47,7 +47,7 @@ def render_pdf_cert_by_pk(self, certificate_pk):
                 certificate.pk))
 
 
-@task(base=BaseInstructorTask, queue=settings.HIGH_PRIORITY_QUEUE)
+@shared_task(base=BaseInstructorTask, queue=settings.HIGH_PRIORITY_QUEUE)
 def merge_all_certificates(entry_id, xmodule_instance_args):
     """
     Grade students and generate certificates.
