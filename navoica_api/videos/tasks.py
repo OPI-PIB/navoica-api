@@ -1,10 +1,10 @@
 import tempfile
 
 import ffmpeg
-from celery.task import task
+from celery import shared_task
 from django.conf import settings
 
-from navoica_api.videos import VIDEOS_LOG
+from navoica_api.videos import VIDEOS_LOG, path_to_resolution
 from navoica_api.videos.storage import TemporaryStorage, VideoAzureStorage, RawVideoAzureStorage
 
 videos_storage = VideoAzureStorage()
@@ -24,17 +24,18 @@ def encode_upload_video(video_id, resolution):
 
     VIDEOS_LOG.info("[Encode video] Uploading: %s %s" % (resolution, video_id))
 
-    new_path = "%s/%s" % (resolution, video_id)
+    path = path_to_resolution(resolution=resolution, video_id=video_id)
+
     videos_storage.save(
-        new_path, tmp_file
+        path, tmp_file
     )
 
     tmp_file.close()
 
-    VIDEOS_LOG.info("[Encode video] Uploaded and deleted: %s" % new_path)
+    VIDEOS_LOG.info("[Encode video] Uploaded and deleted: %s" % path)
 
 
-@task(queue=settings.HIGH_PRIORITY_QUEUE)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60 * 5, queue=settings.HIGH_PRIORITY_QUEUE)
 def encode_videos(video_id):
     VIDEOS_LOG.info("[Encode videos] Start encoding for: %s" % video_id)
 
