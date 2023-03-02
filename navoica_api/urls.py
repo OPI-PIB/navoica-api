@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls import url
-from static_template_view import views
+from lms.djangoapps.static_template_view import views
 
 from navoica_api.certificates import api
 
