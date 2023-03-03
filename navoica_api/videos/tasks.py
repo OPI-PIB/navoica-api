@@ -35,7 +35,7 @@ def encode_upload_video(video_id, resolution):
     VIDEOS_LOG.info("[Encode video] Uploaded and deleted: %s" % path)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60 * 5, queue=settings.HIGH_PRIORITY_QUEUE)
+@shared_task(max_retries=3, default_retry_delay=60 * 5, queue=settings.HIGH_PRIORITY_QUEUE)
 def encode_videos(video_id):
     VIDEOS_LOG.info("[Encode videos] Start encoding for: %s" % video_id)
 
