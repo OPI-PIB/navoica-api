@@ -11,9 +11,13 @@ from django.conf import settings
 class Command(BaseCommand):
     help = 'Check that all videos added in the last 7 days have all resolutions'
 
+    def add_arguments(self, parser):
+        parser.add_argument('days', metavar='d', type=int, default=7, help='Check nth of last days')
+
     def handle(self, *args, **options):
         videos_storage = VideoAzureStorage()
-        for video in Video.objects.filter(status='upload_completed', created__gte=datetime.now() - timedelta(days=7)):
+        for video in Video.objects.filter(status='upload_completed',
+                                          created__gte=datetime.now() - timedelta(days=options['days'])):
             for resolution in settings.VIDEO_RESOLUTIONS:
                 path = path_to_resolution(resolution=resolution, video_id=video.edx_video_id)
                 if not videos_storage.exists(path):
