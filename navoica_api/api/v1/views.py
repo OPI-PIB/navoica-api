@@ -665,7 +665,5 @@ class PowerFormApiView(APIView):
     def get(self, request, course_id=None):
         course_key = get_course_key(request, course_id)
         course = modulestore().get_course(course_key)
-        if course.other_course_settings.get('external_enroll').get('value'):
-            power = course.other_course_settings.get('external_enroll_url').get('value')
-        power = False
+        power = course.other_course_settings.get('external_enroll_url').get('value')
         return Response({"power": power})
