@@ -46,6 +46,13 @@ USER_URLS = ([
     ),
 ], 'user_api')
 
+POWERFORM_URLS = ([
+    url(
+        r'^{course_id}/$'.format(course_id=settings.COURSE_ID_PATTERN),
+        views.PowerFormApiView.as_view(),
+        name='powerformcheck'
+    ),
+], 'powerformcheck_api')
 
 GRADE_URLS = ([
     url(
@@ -67,5 +74,6 @@ urlpatterns = [
     url(r'^branding/', include(BRANDING_URLS)),
     url(r'^grades/', include(GRADE_URLS)),
     url(r'^courses_list/', include(COURSES_URLS)),
+    url(r'^powerformcheck/', include(POWERFORM_URLS)),
     url(r'^', include(router.urls)),
 ]
