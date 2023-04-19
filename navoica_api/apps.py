@@ -14,6 +14,8 @@ class NavoicaApiConfig(AppConfig):
         # noinspection PyUnresolvedReferences
         from navoica_api.certificates.signals.handlers import update_cert
         # noinspection PyUnresolvedReferences
+        from navoica_api.certificates.signals.handlers import update_course_enrollment
+        # noinspection PyUnresolvedReferences
         from navoica_api.videos.signals.handlers import encode_video_recv
 
     # plugin_app = {
