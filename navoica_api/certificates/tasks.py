@@ -10,7 +10,7 @@ from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.tasks_helper.runner import run_main_task
 from lms.djangoapps.certificates.api import certificates_viewable_for_course
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
-
+from django.urls import reverse
 from navoica_api.certificates.functions import render_pdf, merging_all_course_certificates
 
 TASK_LOG = logging.getLogger('edx.celery.task')
@@ -31,7 +31,8 @@ def render_pdf_cert_by_pk(self, certificate_pk):
             "Certificates: Generating pdf for cert {}".format(
                 certificate.pk))
 
-        r = requests.get("http://{}/certificates/{}".format(settings.INTERNAL_HOST_IP, certificate.verify_uuid))
+        r = requests.get("{}{}".format(settings.LMS_ROOT_URL, reverse('certificates:render_cert_by_uuid',
+                                                                                    args=[certificate.verify_uuid])))
 
         if r.status_code == 200:
             cert = render_pdf(html=r.content, certificate_pk=certificate_pk)
