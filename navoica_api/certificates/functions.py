@@ -21,21 +21,6 @@ def render_pdf(html, certificate_pk):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    """
-    information: replace all url from navoica.pl to internal ip address due to incorrect routing from inside host
-    """
-    if settings.INTERNAL_HOST_IP:
-        for img in soup.find_all(['img', 'script']):
-            if img.get("src", None):
-                img_src = img['src']
-                o = urlparse(img_src)
-                img['src'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
-
-        for href in soup.find_all(['link', 'base']):
-            link_href = href['href']
-            o = urlparse(link_href)
-            href['href'] = o._replace(netloc=settings.INTERNAL_HOST_IP, scheme="http").geturl()
-
     html = str(soup)
     log.info(
         "Cert [PDF]: {}".format(html)
