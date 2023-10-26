@@ -35,7 +35,7 @@ class GetCourseExtendedInfo(APIView):
         course_run = modulestore().get_course(course_key)
 
         external_enroll_url_data = None
-        if c_settings.get('external_enroll')['value'] == True:
+        if c_settings.get('external_enroll') and c_settings.get('external_enroll')['value'] == True:
             external_enroll_url = CourseDisplayValueSerializer(
                 data=c_settings.get('external_enroll_url'))
             external_enroll_url.is_valid()
