@@ -4,7 +4,7 @@ from edxval.models import Video
 from navoica_api.videos.tasks import encode_videos
 
 from navoica_api.videos import path_to_resolution, VIDEOS_LOG
-from navoica_api.videos.storage import VideoAzureStorage
+from navoica_api.videos.storage import VideoS3Storage
 from django.conf import settings
 
 
@@ -15,7 +15,7 @@ class Command(BaseCommand):
         parser.add_argument('days', metavar='d', type=int, default=7, help='Check nth of last days')
 
     def handle(self, *args, **options):
-        videos_storage = VideoAzureStorage()
+        videos_storage = VideoS3Storage()
         for video in Video.objects.filter(status='upload_completed',
                                           created__gte=datetime.now() - timedelta(days=options['days'])):
             for resolution in settings.VIDEO_RESOLUTIONS:

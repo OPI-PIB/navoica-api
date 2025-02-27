@@ -5,10 +5,10 @@ from celery import shared_task
 from django.conf import settings
 
 from navoica_api.videos import VIDEOS_LOG, path_to_resolution
-from navoica_api.videos.storage import TemporaryStorage, VideoAzureStorage, RawVideoAzureStorage
+from navoica_api.videos.storage import TemporaryStorage, VideoS3Storage, RawVideoS3Storage
 
-videos_storage = VideoAzureStorage()
-raw_videos_storage = RawVideoAzureStorage()
+videos_storage = VideoS3Storage()
+raw_videos_storage = RawVideoS3Storage()
 tmp_storage = TemporaryStorage()
 
 
