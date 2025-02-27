@@ -13,10 +13,14 @@ class RawVideoAzureStorage(AzureStorage):
 
 class VideoS3Storage(S3Boto3Storage):
     bucket_name = 'navoica-movies'
+    custom_domain = None
+    addressing_style = 'virtual'
 
 class RawVideoS3Storage(S3Boto3Storage):
     bucket_name = 'navoica-movies'
     location = 'videos'
+    addressing_style = 'virtual'
+    custom_domain = None
 
 class TemporaryStorage(FileSystemStorage):
     location = '/edx/var/edxapp/tmp/'
